@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Usuń grupę — SplitUs{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Usuń grupę</h1>
+</div>
+<div class="form-card">
+    <p>Czy na pewno chcesz usunąć grupę <strong>{{ grupa.nazwa }}</strong>? Ta operacja jest nieodwracalna.</p>
+    <form method="post" class="form">
+        {{ csrf_input }}
+        <div class="form-actions">
+            <button type="submit" class="btn btn-danger">Tak, usuń</button>
+            <a href="{{ url('core:szczegoly_grupy', pk=grupa.pk) }}" class="btn btn-outline">Anuluj</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

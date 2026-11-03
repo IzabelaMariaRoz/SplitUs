@@ -1,0 +1,26 @@
+# Baza danych SQLite (lokalna, nie wrzucamy na GitHub)
+db.sqlite3
+
+# Zmienne środowiskowe (hasła, klucze)
+.env
+*.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Środowisko wirtualne
+venv/
+.venv/
+env/
+
+# Django
+*.log
+staticfiles/
+
+# IDE
+.idea/
+.vscode/
+*.iml

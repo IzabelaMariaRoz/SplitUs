@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Nowa grupa — SplitUs{% endblock %}
+{% block content %}
+<div class="page-header">
+    <a href="{{ url('core:lista_grup') }}" class="back-link">← Grupy</a>
+    <h1>Nowa grupa</h1>
+</div>
+<div class="form-card">
+    <form method="post" class="form">
+        {{ csrf_input }}
+        {% for field in form %}
+        <div class="form-group">
+            <label class="form-label">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<p class="form-error">{{ field.errors|join(', ') }}</p>{% endif %}
+        </div>
+        {% endfor %}
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Utwórz grupę</button>
+            <a href="{{ url('core:lista_grup') }}" class="btn btn-outline">Anuluj</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

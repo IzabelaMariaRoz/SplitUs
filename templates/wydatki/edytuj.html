@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Edytuj wydatek — SplitUs{% endblock %}
+{% block content %}
+<div class="page-header">
+    <a href="{{ url('core:szczegoly_grupy', pk=grupa.pk) }}" class="back-link">← {{ grupa.nazwa }}</a>
+    <h1>Edytuj wydatek</h1>
+</div>
+<div class="form-card">
+    <form method="post" class="form">
+        {{ csrf_input }}
+        {% for field in form %}
+        <div class="form-group">
+            <label class="form-label">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<p class="form-error">{{ field.errors|join(', ') }}</p>{% endif %}
+        </div>
+        {% endfor %}
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Zapisz zmiany</button>
+            <a href="{{ url('core:szczegoly_grupy', pk=grupa.pk) }}" class="btn btn-outline">Anuluj</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

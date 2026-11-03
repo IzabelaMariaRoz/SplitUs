@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Logowanie — SplitUs{% endblock %}
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <h1 class="auth-title">Logowanie</h1>
+        <p class="auth-sub">Witaj z powrotem w SplitUs</p>
+        <form method="post" class="form">
+            {{ csrf_input }}
+            <div class="form-group">
+                <label class="form-label" for="id_username">Adres e-mail</label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                <p class="form-error">{{ form.username.errors|join(', ') }}</p>
+                {% endif %}
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="id_password">Hasło</label>
+                {{ form.password }}
+                {% if form.password.errors %}
+                <p class="form-error">{{ form.password.errors|join(', ') }}</p>
+                {% endif %}
+            </div>
+            {% if form.non_field_errors() %}
+            <p class="form-error">{{ form.non_field_errors()|join(', ') }}</p>
+            {% endif %}
+            <button type="submit" class="btn btn-primary btn-full">Zaloguj się</button>
+        </form>
+        <p class="auth-link">Nie masz konta? <a href="{{ url('core:rejestracja') }}">Zarejestruj się</a></p>
+    </div>
+</div>
+{% endblock %}

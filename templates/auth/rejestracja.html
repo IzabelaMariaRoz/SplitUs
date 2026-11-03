@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Rejestracja — SplitUs{% endblock %}
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <h1 class="auth-title">Utwórz konto</h1>
+        <p class="auth-sub">Zacznij dzielić wydatki ze znajomymi</p>
+        <form method="post" class="form">
+            {{ csrf_input }}
+            {% for field in form %}
+            <div class="form-group">
+                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                <p class="form-error">{{ field.errors|join(', ') }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+            {% if form.non_field_errors() %}
+            <p class="form-error">{{ form.non_field_errors()|join(', ') }}</p>
+            {% endif %}
+            <button type="submit" class="btn btn-primary btn-full">Zarejestruj się</button>
+        </form>
+        <p class="auth-link">Masz już konto? <a href="{{ url('core:logowanie') }}">Zaloguj się</a></p>
+    </div>
+</div>
+{% endblock %}

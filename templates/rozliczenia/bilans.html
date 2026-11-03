@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Bilans — {{ grupa.nazwa }} — SplitUs{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="{{ url('core:szczegoly_grupy', pk=grupa.pk) }}" class="back-link">← {{ grupa.nazwa }}</a>
+        <h1>Bilans grupy</h1>
+    </div>
+    <a href="{{ url('core:nowa_splata', pk=grupa.pk) }}" class="btn btn-primary">+ Spłata</a>
+</div>
+
+<div class="two-col">
+
+    <!-- Salda -->
+    <section class="card">
+        <div class="card-header"><h2>Salda członków</h2></div>
+        <table class="table">
+            <thead>
+                <tr><th>Użytkownik</th><th>Saldo</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                {% for email, dane in bilans.items() %}
+                <tr>
+                    <td>{{ dane.imie }}</td>
+                    <td class="amount {% if dane.saldo > 0 %}amount--positive{% elif dane.saldo < 0 %}amount--negative{% endif %}">
+                        {{ "%.2f"|format(dane.saldo) }} PLN
+                    </td>
+                    <td>
+                        {% if dane.saldo > 0 %}
+                        <span class="badge badge--positive">należy mu się</span>
+                        {% elif dane.saldo < 0 %}
+                        <span class="badge badge--negative">jest winien</span>
+                        {% else %}
+                        <span class="badge badge--neutral">rozliczony</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+
+    <!-- Optymalne transakcje -->
+    <section class="card">
+        <div class="card-header"><h2>Sugerowane spłaty</h2></div>
+        <div class="card-body">
+            {% if transakcje %}
+            <p class="form-info">Minimalna liczba przelewów do pełnego rozliczenia:</p>
+            <ul class="transakcje-list">
+                {% for t in transakcje %}
+                <li class="transakcja-item">
+                    <span class="transakcja-od">{{ t.od_imie }}</span>
+                    <span class="transakcja-arrow">→</span>
+                    <span class="transakcja-do">{{ t.do_imie }}</span>
+                    <span class="transakcja-kwota amount">{{ "%.2f"|format(t.kwota) }} PLN</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="empty-text">✅ Wszyscy są rozliczeni!</p>
+            {% endif %}
+        </div>
+    </section>
+
+</div>
+{% endblock %}

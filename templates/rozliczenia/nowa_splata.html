@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Nowa spłata — SplitUs{% endblock %}
+{% block content %}
+<div class="page-header">
+    <a href="{{ url('core:bilans_grupy', pk=grupa.pk) }}" class="back-link">← Bilans</a>
+    <h1>Zarejestruj spłatę</h1>
+</div>
+<div class="form-card">
+    <form method="post" class="form">
+        {{ csrf_input }}
+        {% for field in form %}
+        <div class="form-group">
+            <label class="form-label">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<p class="form-error">{{ field.errors|join(', ') }}</p>{% endif %}
+        </div>
+        {% endfor %}
+        {% if form.non_field_errors() %}
+        <p class="form-error">{{ form.non_field_errors()|join(', ') }}</p>
+        {% endif %}
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Zarejestruj</button>
+            <a href="{{ url('core:bilans_grupy', pk=grupa.pk) }}" class="btn btn-outline">Anuluj</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

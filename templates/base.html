@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SplitUs — aplikacja do podziału wydatków grupowych">
+    <title>{% block title %}SplitUs{% endblock %}</title>
+    <link rel="stylesheet" href="{{ static('css/main.css') }}">
+</head>
+<body>
+
+<div class="layout">
+    {% if request.user.is_authenticated %}
+    <nav class="sidebar">
+        <div class="sidebar-brand">
+            <span class="brand-icon">💸</span>
+            <span class="brand-name">SplitUs</span>
+        </div>
+        <ul class="sidebar-nav">
+            <li>
+                <a href="{{ url('core:lista_grup') }}"
+                   class="nav-link {% if request.resolver_match.url_name == 'lista_grup' %}active{% endif %}">
+                    👥 Grupy
+                </a>
+            </li>
+            <li>
+                {% set count = pending_invitations(request) %}
+                <a href="{{ url('core:lista_zaproszen') }}"
+                   class="nav-link {% if request.resolver_match.url_name == 'lista_zaproszen' %}active{% endif %}">
+                    📬 Zaproszenia
+                    {% if count > 0 %}
+                    <span class="nav-badge">{{ count }}</span>
+                    {% endif %}
+                </a>
+            </li>
+        </ul>
+        <div class="sidebar-footer">
+            <span class="sidebar-user">{{ request.user.imie }}</span>
+            <a href="{{ url('core:wylogowanie') }}" class="btn-logout">Wyloguj</a>
+        </div>
+    </nav>
+    {% endif %}
+
+    <main class="main-content {% if not request.user.is_authenticated %}full-width{% endif %}">
+        {% for message in get_messages(request) %}
+        <div class="alert alert--{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+
+        {% block content %}{% endblock %}
+    </main>
+</div>
+
+</body>
+</html>

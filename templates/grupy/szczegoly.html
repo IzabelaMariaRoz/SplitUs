@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}{{ grupa.nazwa }} — SplitUs{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <a href="{{ url('core:lista_grup') }}" class="back-link">← Grupy</a>
+        <h1>{{ grupa.nazwa }}</h1>
+        <p class="page-sub">Utworzona: {{ grupa.data_utworzenia }}</p>
+    </div>
+    <div class="header-actions">
+        <a href="{{ url('core:nowy_wydatek', pk=grupa.pk) }}" class="btn btn-primary">+ Wydatek</a>
+        <a href="{{ url('core:bilans_grupy', pk=grupa.pk) }}" class="btn btn-secondary">Bilans</a>
+        <a href="{{ url('core:historia_grupy', pk=grupa.pk) }}" class="btn btn-outline">Historia</a>
+    </div>
+</div>
+
+<div class="two-col">
+
+    <!-- Wydatki -->
+    <section class="card">
+        <div class="card-header">
+            <h2>Ostatnie wydatki</h2>
+        </div>
+        <div class="card-body">
+            {% if wydatki %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Tytuł</th>
+                        <th>Kwota</th>
+                        <th>Płatnik</th>
+                        <th>Data</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for w in wydatki %}
+                    <tr>
+                        <td>{{ w.tytul }}</td>
+                        <td class="amount">{{ w.kwota }} PLN</td>
+                        <td>{{ w.platnik.imie }}</td>
+                        <td>{{ w.data }}</td>
+                        <td>
+                            <span class="badge badge--{{ w.status }}">{{ w.status }}</span>
+                        </td>
+                        <td class="actions">
+                            <a href="{{ url('core:edytuj_wydatek', pk=w.pk) }}" class="btn btn-sm btn-outline">Edytuj</a>
+                            <form method="post" action="{{ url('core:usun_wydatek', pk=w.pk) }}" style="display:inline">
+                                {{ csrf_input }}
+                                <button type="submit" class="btn btn-sm btn-danger"
+                                    onclick="return confirm('Usunąć wydatek?')">Usuń</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="empty-text">Brak wydatków. <a href="{{ url('core:nowy_wydatek', pk=grupa.pk) }}">Dodaj pierwszy</a>.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Prawy panel -->
+    <div class="side-panel">
+
+        <!-- Aktualny bilans -->
+        <section class="card">
+            <div class="card-header">
+                <h2>Aktualny bilans</h2>
+            </div>
+            <table class="table">
+                <thead>
+                    <tr><th>Osoba</th><th>Saldo</th></tr>
+                </thead>
+                <tbody>
+                    {% for email, dane in bilans.items() %}
+                    <tr>
+                        <td>{{ dane.imie }}</td>
+                        <td class="amount {% if dane.saldo > 0 %}amount--positive{% elif dane.saldo < 0 %}amount--negative{% endif %}">
+                            {% if dane.saldo > 0 %}+{% endif %}{{ "%.2f"|format(dane.saldo) }} PLN
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <!-- Sugerowane spłaty -->
+        {% if transakcje %}
+        <section class="card">
+            <div class="card-header">
+                <h2>Do spłaty</h2>
+            </div>
+            <ul class="transakcje-list" style="padding: 0 16px;">
+                {% for t in transakcje %}
+                <li class="transakcja-item">
+                    <span class="transakcja-od">{{ t.od_imie }}</span>
+                    <span class="transakcja-arrow">→</span>
+                    <span class="transakcja-do">{{ t.do_imie }}</span>
+                    <strong class="transakcja-kwota">{{ "%.2f"|format(t.kwota) }} PLN</strong>
+                </li>
+                {% endfor %}
+            </ul>
+        </section>
+        {% else %}
+        <section class="card">
+            <div class="card-body">
+                <p class="empty-text" style="padding:0">✅ Wszyscy są rozliczeni!</p>
+            </div>
+        </section>
+        {% endif %}
+
+        <!-- Członkowie -->
+        <section class="card">
+            <div class="card-header">
+                <h2>Członkowie</h2>
+                <a href="{{ url('core:dodaj_czlonka', pk=grupa.pk) }}" class="btn btn-sm btn-outline">+ Dodaj</a>
+            </div>
+            <ul class="member-list">
+                {% for czlonek in czlonkowie %}
+                <li class="member-item">
+                    <span class="member-avatar">{{ czlonek.imie[0] }}</span>
+                    <div>
+                        <strong>{{ czlonek.imie }}</strong>
+                        {% if czlonek == grupa.tworca %}
+                        <span class="badge badge--info">twórca</span>
+                        {% endif %}
+                        <br><small>{{ czlonek.adres_email }}</small>
+                    </div>
+                    {% if request.user == grupa.tworca and czlonek != grupa.tworca %}
+                    <form method="post" action="{{ url('core:usun_czlonka', pk=grupa.pk, user_pk=czlonek.pk) }}">
+                        {{ csrf_input }}
+                        <button type="submit" class="btn btn-sm btn-danger"
+                            onclick="return confirm('Usunąć {{ czlonek.imie }} z grupy?')">✕</button>
+                    </form>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </section>
+
+        <!-- Ostatnie spłaty -->
+        {% if splaty %}
+        <section class="card">
+            <div class="card-header">
+                <h2>Ostatnie spłaty</h2>
+            </div>
+            <ul class="splata-list">
+                {% for s in splaty %}
+                <li class="splata-item">
+                    <span>{{ s.platnik.imie }} → {{ s.odbiorca.imie }}</span>
+                    <span class="amount">{{ s.kwota }} PLN</span>
+                    {% if s.uregulowana %}
+                    <span class="badge badge--rozliczony">✓</span>
+                    {% else %}
+                    <form method="post" action="{{ url('core:ureguluj_splate', pk=s.pk) }}" style="display:inline">
+                        {{ csrf_input }}
+                        <button type="submit" class="btn btn-sm btn-outline">Potwierdź</button>
+                    </form>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        </section>
+        {% endif %}
+
+        <!-- Szybka spłata -->
+        <section class="card">
+            <div class="card-header">
+                <h2>Zarejestruj spłatę</h2>
+            </div>
+            <div class="card-body">
+                <a href="{{ url('core:nowa_splata', pk=grupa.pk) }}" class="btn btn-secondary btn-full">Dodaj spłatę</a>
+            </div>
+        </section>
+
+        <!-- Usuń grupę (tylko twórca) -->
+        {% if request.user == grupa.tworca %}
+        <section class="card card--danger">
+            <div class="card-body">
+                <a href="{{ url('core:usun_grupe', pk=grupa.pk) }}" class="btn btn-danger btn-full">Usuń grupę</a>
+            </div>
+        </section>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

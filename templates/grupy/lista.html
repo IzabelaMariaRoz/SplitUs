@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Moje grupy — SplitUs{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Moje grupy</h1>
+    <a href="{{ url('core:nowa_grupa') }}" class="btn btn-primary">+ Nowa grupa</a>
+</div>
+
+{% if grupy %}
+<div class="card-grid">
+    {% for grupa in grupy %}
+    <div class="card">
+        <div class="card-body">
+            <h2 class="card-title">{{ grupa.nazwa }}</h2>
+            <p class="card-meta">Utworzona: {{ grupa.data_utworzenia }}</p>
+            <p class="card-meta">Członkowie: {{ grupa.czlonkowie.count() }}</p>
+        </div>
+        <div class="card-footer">
+            <a href="{{ url('core:szczegoly_grupy', pk=grupa.pk) }}" class="btn btn-secondary">Szczegóły</a>
+            <a href="{{ url('core:bilans_grupy', pk=grupa.pk) }}" class="btn btn-outline">Bilans</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p class="empty-icon">👥</p>
+    <p>Nie należysz jeszcze do żadnej grupy.</p>
+    <a href="{{ url('core:nowa_grupa') }}" class="btn btn-primary">Utwórz pierwszą grupę</a>
+</div>
+{% endif %}
+{% endblock %}

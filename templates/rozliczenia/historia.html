@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Historia — {{ grupa.nazwa }} — SplitUs{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="{{ url('core:szczegoly_grupy', pk=grupa.pk) }}" class="back-link">← {{ grupa.nazwa }}</a>
+        <h1>Historia operacji</h1>
+    </div>
+</div>
+
+<div class="two-col">
+
+    <!-- Wydatki -->
+    <section class="card">
+        <div class="card-header"><h2>Wydatki</h2></div>
+        {% if historia.wydatki %}
+        <table class="table">
+            <thead>
+                <tr><th>Tytuł</th><th>Kwota</th><th>Płatnik</th><th>Data</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                {% for w in historia.wydatki %}
+                <tr>
+                    <td>{{ w.tytul }}</td>
+                    <td class="amount">{{ w.kwota }} PLN</td>
+                    <td>{{ w.platnik__imie }}</td>
+                    <td>{{ w.data }}</td>
+                    <td><span class="badge badge--{{ w.status }}">{{ w.status }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-text card-body">Brak wydatków.</p>
+        {% endif %}
+    </section>
+
+    <!-- Spłaty -->
+    <section class="card">
+        <div class="card-header"><h2>Spłaty</h2></div>
+        {% if historia.splaty %}
+        <table class="table">
+            <thead>
+                <tr><th>Od</th><th>Do</th><th>Kwota</th><th>Data</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+                {% for s in historia.splaty %}
+                <tr>
+                    <td>{{ s.platnik__imie }}</td>
+                    <td>{{ s.odbiorca__imie }}</td>
+                    <td class="amount">{{ s.kwota }} PLN</td>
+                    <td>{{ s.data }}</td>
+                    <td>
+                        {% if s.uregulowana %}
+                        <span class="badge badge--rozliczony">uregulowana</span>
+                        {% else %}
+                        <span class="badge badge--otwarty">oczekująca</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="empty-text card-body">Brak spłat.</p>
+        {% endif %}
+    </section>
+
+</div>
+{% endblock %}
