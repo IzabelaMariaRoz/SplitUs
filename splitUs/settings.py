@@ -30,6 +30,7 @@ MIGRATION_MODULES = {
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -73,7 +74,7 @@ WSGI_APPLICATION = "splitUs.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django_mongodb_backend",
-        "HOST": config("MONGODB_URI", default="mongodb+srv://mati68a:FranekDolas123@splitus.iei9lgg.mongodb.net/?retryWrites=true&w=majority"),
+        "HOST": config("MONGODB_URI", default="mongodb+srv://mati68a:<password>@splitus.iei9lgg.mongodb.net/?retryWrites=true&w=majority"),
         "NAME": "splitus",
     }
 }
@@ -92,6 +93,12 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+CSRF_TRUSTED_ORIGINS = config(
+    "CSRF_TRUSTED_ORIGINS",
+    default="https://*.onrender.com,http://127.0.0.1,http://localhost",
+).split(",")
 
 LOGIN_URL = "/logowanie/"
 LOGIN_REDIRECT_URL = "/grupy/"
