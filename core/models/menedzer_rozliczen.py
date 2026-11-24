@@ -69,7 +69,7 @@ class MenedzerRozliczen(models.Model):
         nazwy = {u.adres_email: u.imie for u in czlonkowie}
 
         # Wydatki: płatnik zyskuje, dłużnicy tracą
-        for wydatek in self.wydatki.prefetch_related("podzial__uzytkownik"):
+        for wydatek in self.wydatki.all():
             ep = wydatek.platnik.adres_email
             if ep in bilans:
                 bilans[ep] += wydatek.kwota
@@ -110,7 +110,7 @@ class MenedzerRozliczen(models.Model):
             for u in czlonkowie
         }
 
-        for w in self.wydatki.prefetch_related("podzial__uzytkownik"):
+        for w in self.wydatki.all():
             ep = w.platnik.adres_email
             if ep in dane:
                 dane[ep]["total_paid"] += w.kwota

@@ -23,12 +23,12 @@ class GrupaRepository:
     @staticmethod
     def pobierz_grupy_uzytkownika(user: Uzytkownik):
         """Zwraca QuerySet grup do których należy użytkownik."""
-        return user.grupy.all().prefetch_related("czlonkowie")
+        return user.grupy.all()
 
     @staticmethod
     def pobierz_grupy_ze_statystykami(user: Uzytkownik):
         """Zwraca listę grup użytkownika z liczbą członków i łączną sumą wydatków (do Sidebara)."""
-        grupy = user.grupy.all().prefetch_related("czlonkowie", "menedzer__wydatki")
+        grupy = user.grupy.all()
         wynik = []
         for g in grupy:
             suma = 0
