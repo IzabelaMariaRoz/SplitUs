@@ -66,7 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Brand mark */}
       <div className="flex h-16 items-center justify-between border-b border-slate-200 px-5">
         <span className="font-display text-lg font-bold tracking-tight text-slate-900 whitespace-nowrap shrink-0">
-          PoRówno
+          SplitUs
         </span>
         <button
           type="button"

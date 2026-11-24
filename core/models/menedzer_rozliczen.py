@@ -93,7 +93,7 @@ class MenedzerRozliczen(models.Model):
         }
 
     def pobierz_szczegolowy_bilans(self) -> list:
-        """Zwraca szczegółowe zestawienie bilansu per uczestnik do tabeli PoRówno."""
+        """Zwraca szczegółowe zestawienie bilansu per uczestnik do tabeli SplitUs."""
         czlonkowie = self.grupa.pobierz_czlonkow()
         dane = {
             u.adres_email: {
