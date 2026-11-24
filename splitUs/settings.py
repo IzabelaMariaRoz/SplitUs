@@ -108,6 +108,8 @@ CSRF_TRUSTED_ORIGINS = config(
     default="https://*.onrender.com,http://127.0.0.1,http://localhost",
 ).split(",")
 
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 LOGIN_URL = "/logowanie/"
 LOGIN_REDIRECT_URL = "/grupy/"
 LOGOUT_REDIRECT_URL = "/logowanie/"
