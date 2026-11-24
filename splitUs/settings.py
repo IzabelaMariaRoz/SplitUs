@@ -12,14 +12,21 @@ DEBUG = config("DEBUG", default=True, cast=bool)
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="*").split(",")
 
 INSTALLED_APPS = [
-    "django.contrib.admin",
-    "django.contrib.auth",
-    "django.contrib.contenttypes",
+    "splitUs.apps.MongoAdminConfig",
+    "splitUs.apps.MongoAuthConfig",
+    "splitUs.apps.MongoContentTypesConfig",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "core",
 ]
+
+MIGRATION_MODULES = {
+    "admin": "mongo_migrations.admin",
+    "auth": "mongo_migrations.auth",
+    "contenttypes": "mongo_migrations.contenttypes",
+    "sessions": "mongo_migrations.sessions",
+}
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -61,21 +68,13 @@ TEMPLATES = [
 WSGI_APPLICATION = "splitUs.wsgi.application"
 
 # ---------------------------------------------------------------------------
-# Baza danych — SQLite (tymczasowe)
-# Zamień na MongoDB Atlas gdy będziesz gotowy:
-#
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django_mongodb_backend",
-#         "HOST": config("MONGODB_URI"),
-#         "NAME": "splitus",
-#     }
-# }
+# Baza danych — MongoDB Atlas
 # ---------------------------------------------------------------------------
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django_mongodb_backend",
+        "HOST": config("MONGODB_URI", default="mongodb+srv://mati68a:FranekDolas123@splitus.iei9lgg.mongodb.net/?retryWrites=true&w=majority"),
+        "NAME": "splitus",
     }
 }
 
@@ -98,4 +97,4 @@ LOGIN_URL = "/logowanie/"
 LOGIN_REDIRECT_URL = "/grupy/"
 LOGOUT_REDIRECT_URL = "/logowanie/"
 
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+DEFAULT_AUTO_FIELD = "django_mongodb_backend.fields.ObjectIdAutoField"
