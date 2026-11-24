@@ -1,191 +1,587 @@
 {% extends "base.html" %}
-{% block title %}{{ grupa.nazwa }} — SplitUs{% endblock %}
+
+{% block title %}{{ grupa.nazwa }} — PoRówno{% endblock %}
+
 {% block content %}
+<div class="space-y-6">
 
-<div class="page-header">
-    <div>
-        <a href="{{ url('core:lista_grup') }}" class="back-link">← Grupy</a>
-        <h1>{{ grupa.nazwa }}</h1>
-        <p class="page-sub">Utworzona: {{ grupa.data_utworzenia }}</p>
-    </div>
-    <div class="header-actions">
-        <a href="{{ url('core:nowy_wydatek', pk=grupa.pk) }}" class="btn btn-primary">+ Wydatek</a>
-        <a href="{{ url('core:bilans_grupy', pk=grupa.pk) }}" class="btn btn-secondary">Bilans</a>
-        <a href="{{ url('core:historia_grupy', pk=grupa.pk) }}" class="btn btn-outline">Historia</a>
-    </div>
-</div>
-
-<div class="two-col">
-
-    <!-- Wydatki -->
-    <section class="card">
-        <div class="card-header">
-            <h2>Ostatnie wydatki</h2>
+    <!-- Group Header -->
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div class="min-w-0">
+            <h1 class="font-display text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl text-balance">
+                {{ grupa.nazwa }}
+            </h1>
+            <div class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-500 dark:text-slate-400">
+                <span class="inline-flex items-center gap-1 font-medium text-slate-700 dark:text-slate-300">
+                    <i data-lucide="users" class="h-3.5 w-3.5 text-slate-400 dark:text-slate-500"></i>
+                    Znajomi
+                </span>
+                <span aria-hidden="true">·</span>
+                <span>
+                    {{ kpi.czlonkowie_count }} {% if kpi.czlonkowie_count == 1 %}uczestnik{% elif kpi.czlonkowie_count < 5 %}uczestników{% else %}uczestników{% endif %}
+                </span>
+                <span aria-hidden="true">·</span>
+                <span class="font-mono text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-transparent dark:border-slate-700">
+                    PLN (zł)
+                </span>
+                <span aria-hidden="true">·</span>
+                <span class="text-slate-500 dark:text-slate-400">
+                    Utworzona {{ grupa.data_utworzenia }}
+                </span>
+            </div>
         </div>
-        <div class="card-body">
-            {% if wydatki %}
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Tytuł</th>
-                        <th>Kwota</th>
-                        <th>Płatnik</th>
-                        <th>Data</th>
-                        <th>Status</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for w in wydatki %}
-                    <tr>
-                        <td>{{ w.tytul }}</td>
-                        <td class="amount">{{ w.kwota }} PLN</td>
-                        <td>{{ w.platnik.imie }}</td>
-                        <td>{{ w.data }}</td>
-                        <td>
-                            <span class="badge badge--{{ w.status }}">{{ w.status }}</span>
-                        </td>
-                        <td class="actions">
-                            <a href="{{ url('core:edytuj_wydatek', pk=w.pk) }}" class="btn btn-sm btn-outline">Edytuj</a>
-                            <form method="post" action="{{ url('core:usun_wydatek', pk=w.pk) }}" style="display:inline">
-                                {{ csrf_input }}
-                                <button type="submit" class="btn btn-sm btn-danger"
-                                    onclick="return confirm('Usunąć wydatek?')">Usuń</button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <p class="empty-text">Brak wydatków. <a href="{{ url('core:nowy_wydatek', pk=grupa.pk) }}">Dodaj pierwszy</a>.</p>
-            {% endif %}
+
+        <!-- Mobile quick settlement trigger -->
+        <button type="button" onclick="openModal('modal-rejestruj-zwrot')" class="inline-flex sm:hidden items-center justify-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer shadow-xs">
+            <i data-lucide="arrow-right-left" class="h-4 w-4"></i>
+            <span>Zarejestruj zwrot</span>
+        </button>
+    </div>
+
+    <!-- 4-Column KPI Strip -->
+    <section aria-label="Podsumowanie grupy" class="grid grid-cols-1 divide-y divide-slate-200 dark:divide-slate-800 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 sm:grid-cols-2 sm:divide-y-0 sm:gap-px sm:bg-slate-200 dark:sm:bg-slate-800 xl:grid-cols-4 overflow-hidden shadow-xs">
+        <div class="bg-white dark:bg-slate-900 px-5 py-4">
+            <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Suma wydatków</div>
+            <div class="mt-1.5 font-mono text-2xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums">
+                {{ "%.2f"|format(kpi.suma_wydatkow) }} zł
+            </div>
+            <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Łącznie w grupie
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 px-5 py-4">
+            <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Dodane rachunki</div>
+            <div class="mt-1.5 font-mono text-2xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums">
+                {{ kpi.liczba_wydatkow }}
+            </div>
+            <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                {{ kpi.liczba_splat }} zarejestrowanych zwrotów
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 px-5 py-4">
+            <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Średnio na osobę</div>
+            <div class="mt-1.5 font-mono text-2xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums">
+                {{ "%.2f"|format(kpi.srednia_na_osobe) }} zł
+            </div>
+            <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                Przy {{ kpi.czlonkowie_count }} uczestnikach
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 px-5 py-4">
+            <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Pozostało do rozliczenia</div>
+            <div class="mt-1.5 font-mono text-2xl font-bold tracking-tight tabular-nums {% if kpi.pozostalo_do_rozliczenia == 0 %}text-emerald-600 dark:text-emerald-400{% else %}text-slate-900 dark:text-white{% endif %}">
+                {{ "%.2f"|format(kpi.pozostalo_do_rozliczenia) }} zł
+            </div>
+            <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                {% if kpi.pozostalo_do_rozliczenia == 0 %}
+                Grupa w pełni rozliczona
+                {% else %}
+                {{ kpi.liczba_przelewow }} {% if kpi.liczba_przelewow == 1 %}przelew wyrównujący{% elif kpi.liczba_przelewow < 5 %}przelewy wyrównujące{% else %}przelewów wyrównujących{% endif %}
+                {% endif %}
+            </div>
         </div>
     </section>
 
-    <!-- Prawy panel -->
-    <div class="side-panel">
+    <!-- Workspace Tabs Navigation -->
+    <div class="border-b border-slate-200 dark:border-slate-800">
+        <nav aria-label="Widoki grupy" class="-mb-px flex gap-6 overflow-x-auto">
+            <button type="button" onclick="switchTab('expenses')" id="tab-btn-expenses"
+                    class="tab-button border-b-2 pb-3 text-sm font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400">
+                Rachunki ({{ wydatki|length }})
+            </button>
+            <button type="button" onclick="switchTab('balances')" id="tab-btn-balances"
+                    class="tab-button border-b-2 pb-3 text-sm font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer border-transparent text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-800 dark:hover:text-slate-200">
+                Salda i przelewy
+            </button>
+            <button type="button" onclick="switchTab('members')" id="tab-btn-members"
+                    class="tab-button border-b-2 pb-3 text-sm font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer border-transparent text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 hover:text-slate-800 dark:hover:text-slate-200">
+                Uczestnicy ({{ czlonkowie|length }})
+            </button>
+        </nav>
+    </div>
 
-        <!-- Aktualny bilans -->
-        <section class="card">
-            <div class="card-header">
-                <h2>Aktualny bilans</h2>
-            </div>
-            <table class="table">
-                <thead>
-                    <tr><th>Osoba</th><th>Saldo</th></tr>
-                </thead>
-                <tbody>
-                    {% for email, dane in bilans.items() %}
-                    <tr>
-                        <td>{{ dane.imie }}</td>
-                        <td class="amount {% if dane.saldo > 0 %}amount--positive{% elif dane.saldo < 0 %}amount--negative{% endif %}">
-                            {% if dane.saldo > 0 %}+{% endif %}{{ "%.2f"|format(dane.saldo) }} PLN
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </section>
+    <!-- TAB 1: RACHUNKI (EXPENSES VIEW) -->
+    <div id="tab-content-expenses" class="tab-pane space-y-4">
 
-        <!-- Sugerowane spłaty -->
-        {% if transakcje %}
-        <section class="card">
-            <div class="card-header">
-                <h2>Do spłaty</h2>
+        <!-- Toolbar / Search & Filter -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div class="relative flex-1 max-w-md">
+                <i data-lucide="search" class="absolute left-3 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500"></i>
+                <input type="text" id="expense-search-input" onkeyup="filterExpenses()" placeholder="Szukaj po tytule lub płatniku..."
+                       class="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 pl-9 pr-3.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none">
             </div>
-            <ul class="transakcje-list" style="padding: 0 16px;">
-                {% for t in transakcje %}
-                <li class="transakcja-item">
-                    <span class="transakcja-od">{{ t.od_imie }}</span>
-                    <span class="transakcja-arrow">→</span>
-                    <span class="transakcja-do">{{ t.do_imie }}</span>
-                    <strong class="transakcja-kwota">{{ "%.2f"|format(t.kwota) }} PLN</strong>
-                </li>
-                {% endfor %}
-            </ul>
-        </section>
-        {% else %}
-        <section class="card">
-            <div class="card-body">
-                <p class="empty-text" style="padding:0">✅ Wszyscy są rozliczeni!</p>
-            </div>
-        </section>
-        {% endif %}
 
-        <!-- Członkowie -->
-        <section class="card">
-            <div class="card-header">
-                <h2>Członkowie</h2>
-                <a href="{{ url('core:dodaj_czlonka', pk=grupa.pk) }}" class="btn btn-sm btn-outline">+ Dodaj</a>
+            <div class="flex items-center gap-2">
+                <select id="expense-type-filter" onchange="filterExpenses()" class="h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:border-blue-500 focus:outline-none cursor-pointer">
+                    <option value="all">Wszystkie wpisy</option>
+                    <option value="expense">Tylko rachunki</option>
+                    <option value="settlement">Tylko zwroty</option>
+                </select>
+
+                <button type="button" onclick="openModal('modal-dodaj-rachunek')" class="inline-flex h-10 items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors shadow-xs cursor-pointer">
+                    <i data-lucide="plus" class="h-4 w-4"></i>
+                    <span>Dodaj rachunek</span>
+                </button>
             </div>
-            <ul class="member-list">
-                {% for czlonek in czlonkowie %}
-                <li class="member-item">
-                    <span class="member-avatar">{{ czlonek.imie[0] }}</span>
-                    <div>
-                        <strong>{{ czlonek.imie }}</strong>
-                        {% if czlonek == grupa.tworca %}
-                        <span class="badge badge--info">twórca</span>
-                        {% endif %}
-                        <br><small>{{ czlonek.adres_email }}</small>
+        </div>
+
+        <!-- Ledger Entries List -->
+        {% if wydatki or splaty %}
+        <div id="expense-list-container" class="space-y-2.5">
+
+            <!-- Rachunki -->
+            {% for w in wydatki %}
+            <div class="ledger-item expense-card group rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-all hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-xs"
+                 data-type="expense" data-text="{{ w.tytul|lower }} {{ w.platnik.imie|lower }}">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex items-start gap-3.5 min-w-0">
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 group-hover:bg-blue-50 dark:group-hover:bg-blue-950/60 group-hover:text-blue-600 dark:group-hover:text-blue-400 group-hover:border-blue-200 dark:group-hover:border-blue-800 transition-colors">
+                            <i data-lucide="receipt" class="h-5 w-5"></i>
+                        </span>
+                        <div class="min-w-0">
+                            <h3 class="font-display font-semibold text-slate-900 dark:text-white truncate text-base">
+                                {{ w.tytul }}
+                            </h3>
+                            <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                                <span class="font-medium text-slate-700 dark:text-slate-300">{{ w.platnik.imie }} zapłacił(a)</span>
+                                <span aria-hidden="true">·</span>
+                                <span>{{ w.data }}</span>
+                                <span aria-hidden="true">·</span>
+                                <span class="text-slate-500 dark:text-slate-400">Wszyscy po równo</span>
+                            </div>
+                        </div>
                     </div>
-                    {% if request.user == grupa.tworca and czlonek != grupa.tworca %}
-                    <form method="post" action="{{ url('core:usun_czlonka', pk=grupa.pk, user_pk=czlonek.pk) }}">
-                        {{ csrf_input }}
-                        <button type="submit" class="btn btn-sm btn-danger"
-                            onclick="return confirm('Usunąć {{ czlonek.imie }} z grupy?')">✕</button>
-                    </form>
-                    {% endif %}
-                </li>
-                {% endfor %}
-            </ul>
-        </section>
 
-        <!-- Ostatnie spłaty -->
-        {% if splaty %}
-        <section class="card">
-            <div class="card-header">
-                <h2>Ostatnie spłaty</h2>
-            </div>
-            <ul class="splata-list">
-                {% for s in splaty %}
-                <li class="splata-item">
-                    <span>{{ s.platnik.imie }} → {{ s.odbiorca.imie }}</span>
-                    <span class="amount">{{ s.kwota }} PLN</span>
-                    {% if s.uregulowana %}
-                    <span class="badge badge--rozliczony">✓</span>
-                    {% else %}
-                    <form method="post" action="{{ url('core:ureguluj_splate', pk=s.pk) }}" style="display:inline">
-                        {{ csrf_input }}
-                        <button type="submit" class="btn btn-sm btn-outline">Potwierdź</button>
-                    </form>
-                    {% endif %}
-                </li>
-                {% endfor %}
-            </ul>
-        </section>
-        {% endif %}
+                    <div class="flex items-center gap-3 shrink-0">
+                        <div class="text-right">
+                            <div class="font-mono text-base font-bold text-slate-900 dark:text-white tabular-nums">
+                                {{ "%.2f"|format(w.kwota) }} zł
+                            </div>
+                            <button type="button" onclick="toggleDetails('expense-details-{{ w.pk }}')" class="mt-0.5 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium cursor-pointer">
+                                Szczegóły podziału
+                            </button>
+                        </div>
 
-        <!-- Szybka spłata -->
-        <section class="card">
-            <div class="card-header">
-                <h2>Zarejestruj spłatę</h2>
-            </div>
-            <div class="card-body">
-                <a href="{{ url('core:nowa_splata', pk=grupa.pk) }}" class="btn btn-secondary btn-full">Dodaj spłatę</a>
-            </div>
-        </section>
+                        <!-- Actions -->
+                        <div class="flex items-center gap-1 border-l border-slate-100 dark:border-slate-800 pl-2">
+                            <form method="post" action="{{ url('core:usun_wydatek', pk=w.pk) }}" onsubmit="return confirm('Czy na pewno chcesz usunąć rachunek: {{ w.tytul }}?')">
+                                {{ csrf_input }}
+                                <button type="submit" title="Usuń rachunek" class="rounded-lg p-1.5 text-slate-400 dark:text-slate-500 hover:bg-red-50 dark:hover:bg-red-950/60 hover:text-red-600 dark:hover:text-red-400 transition-colors cursor-pointer">
+                                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
 
-        <!-- Usuń grupę (tylko twórca) -->
-        {% if request.user == grupa.tworca %}
-        <section class="card card--danger">
-            <div class="card-body">
-                <a href="{{ url('core:usun_grupe', pk=grupa.pk) }}" class="btn btn-danger btn-full">Usuń grupę</a>
+                <!-- Accordion details of shares -->
+                <div id="expense-details-{{ w.pk }}" class="hidden mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                    <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2">
+                        Podział kosztów między uczestników:
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {% for podzial in w.podzial.all() %}
+                        <div class="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-800/60 px-3 py-2 text-xs border border-slate-200/60 dark:border-slate-700/60">
+                            <span class="font-medium text-slate-700 dark:text-slate-300">{{ podzial.uzytkownik.imie }}</span>
+                            <span class="font-mono font-semibold text-slate-900 dark:text-white">{{ "%.2f"|format(podzial.kwota_do_oddania) }} zł</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
-        </section>
+            {% endfor %}
+
+            <!-- Zwroty / Spłaty -->
+            {% for s in splaty %}
+            <div class="ledger-item settlement-card group rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-all hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-xs"
+                 data-type="settlement" data-text="{{ s.platnik.imie|lower }} {{ s.odbiorca.imie|lower }} zwrot">
+                <div class="flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-3.5 min-w-0">
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400">
+                            <i data-lucide="arrow-right-left" class="h-5 w-5"></i>
+                        </span>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-1.5 text-sm font-semibold text-slate-900 dark:text-white truncate">
+                                <span>{{ s.platnik.imie }}</span>
+                                <i data-lucide="arrow-right" class="h-3.5 w-3.5 text-slate-400 dark:text-slate-500 shrink-0"></i>
+                                <span>{{ s.odbiorca.imie }}</span>
+                                <span class="ml-2 inline-flex items-center rounded-full bg-emerald-100 dark:bg-emerald-950/80 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:text-emerald-300 border border-transparent dark:border-emerald-800">
+                                    Zwrot
+                                </span>
+                            </div>
+                            <div class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                                <span>{{ s.data }}</span>
+                                <span aria-hidden="true">·</span>
+                                <span class="text-emerald-700 dark:text-emerald-400 font-medium">Uregulowane</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3 shrink-0">
+                        <div class="font-mono text-base font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">
+                            {{ "%.2f"|format(s.kwota) }} zł
+                        </div>
+                        <div class="border-l border-slate-100 dark:border-slate-800 pl-2">
+                            <form method="post" action="{{ url('core:usun_splate', pk=s.pk) }}" onsubmit="return confirm('Usunąć ten zwrot?')">
+                                {{ csrf_input }}
+                                <button type="submit" title="Usuń zwrot" class="rounded-lg p-1.5 text-slate-400 dark:text-slate-500 hover:bg-red-50 dark:hover:bg-red-950/60 hover:text-red-600 dark:hover:text-red-400 transition-colors cursor-pointer">
+                                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+        </div>
+        {% else %}
+        <!-- Empty state for expenses -->
+        <div class="rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-12 text-center">
+            <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700">
+                <i data-lucide="receipt" class="h-6 w-6"></i>
+            </div>
+            <h3 class="mt-4 font-display text-base font-semibold text-slate-900 dark:text-white">
+                Brak rachunków w tej grupie
+            </h3>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                Dodaj pierwszy wspólny wydatek, aby sprawdzić jak PoRówno automatycznie podzieli koszty.
+            </p>
+            <button type="button" onclick="openModal('modal-dodaj-rachunek')" class="mt-5 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 cursor-pointer shadow-xs">
+                <i data-lucide="plus" class="h-4 w-4"></i>
+                <span>Dodaj pierwszy rachunek</span>
+            </button>
+        </div>
         {% endif %}
 
     </div>
+
+    <!-- TAB 2: SALDA I PRZELEWY (BALANCES VIEW) -->
+    <div id="tab-content-balances" class="tab-pane hidden space-y-6">
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
+
+            <!-- Left: Member Balances Table -->
+            <section class="lg:col-span-7 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+                <div class="border-b border-slate-200 dark:border-slate-800 px-5 py-4">
+                    <h2 class="font-display text-base font-semibold text-slate-900 dark:text-white">
+                        Bilans uczestników
+                    </h2>
+                    <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                        Porównanie sumy wpłat z przypadającym udziałem w kosztach grupy
+                    </p>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/80 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                <th class="px-5 py-3">Uczestnik</th>
+                                <th class="px-4 py-3 text-right">Zapłacił(a)</th>
+                                <th class="px-4 py-3 text-right">Udział</th>
+                                <th class="px-5 py-3 text-right">Saldo netto</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+                            {% for b in bilans_tabela %}
+                            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
+                                <td class="px-5 py-3.5 font-medium text-slate-900 dark:text-white">
+                                    <div class="flex items-center gap-2.5">
+                                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300">
+                                            {{ b.inicjaly }}
+                                        </span>
+                                        <span class="truncate max-w-[150px] font-semibold">{{ b.imie }}</span>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3.5 text-right font-mono text-xs text-slate-700 dark:text-slate-300 tabular-nums whitespace-nowrap">
+                                    {{ "%.2f"|format(b.total_paid) }} zł
+                                </td>
+                                <td class="px-4 py-3.5 text-right font-mono text-xs text-slate-700 dark:text-slate-300 tabular-nums whitespace-nowrap">
+                                    {{ "%.2f"|format(b.total_share) }} zł
+                                </td>
+                                <td class="px-5 py-3.5 text-right whitespace-nowrap">
+                                    <div class="font-mono text-sm font-bold tabular-nums {{ b.status_color }}">
+                                        {% if b.net_balance > 0 %}+{% endif %}{{ "%.2f"|format(b.net_balance) }} zł
+                                    </div>
+                                    <div class="text-[11px] font-semibold {{ b.status_color }}">
+                                        {{ b.status_text }}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Right: Suggested Optimal Transfers -->
+            <section class="lg:col-span-5 flex flex-col rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
+                <div class="flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 px-5 py-4">
+                    <div>
+                        <h2 class="font-display text-base font-semibold text-slate-900 dark:text-white">
+                            Proponowane przelewy
+                        </h2>
+                        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                            Minimalna liczba transakcji do wyrównania grupy
+                        </p>
+                    </div>
+                    <button type="button" onclick="copyShareableSummary()" id="copy-summary-btn"
+                            class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white whitespace-nowrap shrink-0 cursor-pointer shadow-2xs">
+                        <i data-lucide="copy" class="h-3.5 w-3.5"></i>
+                        <span id="copy-summary-text">Kopiuj opis</span>
+                    </button>
+                </div>
+
+                <div class="flex-1 divide-y divide-slate-100 dark:divide-slate-800">
+                    {% if transakcje %}
+                        {% for t in transakcje %}
+                        <div class="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-slate-900 dark:text-white">
+                                    <span>{{ t.od_imie }}</span>
+                                    <i data-lucide="arrow-right" class="h-3.5 w-3.5 text-slate-400 dark:text-slate-500 shrink-0"></i>
+                                    <span>{{ t.do_imie }}</span>
+                                </div>
+                                <div class="mt-0.5 font-mono text-base font-bold text-slate-900 dark:text-white tabular-nums">
+                                    {{ "%.2f"|format(t.kwota) }} zł
+                                </div>
+                            </div>
+
+                            <form method="post" action="{{ url('core:szybka_splata', pk=grupa.pk) }}">
+                                {{ csrf_input }}
+                                <input type="hidden" name="od_email" value="{{ t.od_email }}">
+                                <input type="hidden" name="do_email" value="{{ t.do_email }}">
+                                <input type="hidden" name="kwota" value="{{ t.kwota }}">
+                                <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 hover:text-emerald-800 dark:hover:text-emerald-300 whitespace-nowrap shrink-0 cursor-pointer shadow-2xs">
+                                    <i data-lucide="check" class="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400"></i>
+                                    <span>Oznacz jako rozliczone</span>
+                                </button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="px-5 py-12 text-center">
+                            <div class="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                                <i data-lucide="check" class="h-5 w-5"></i>
+                            </div>
+                            <p class="mt-3 text-sm font-bold text-slate-900 dark:text-white">
+                                Wszystko jest rozliczone
+                            </p>
+                            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
+                                Nikt nikomu nic nie jest winien. Po dodaniu kolejnych rachunków pojawią się tu sugerowane przelewy.
+                            </p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/80 px-5 py-3 flex items-center justify-between gap-3 text-xs">
+                    <span class="text-slate-500 dark:text-slate-400">Inna kwota lub przelew częściowy?</span>
+                    <button type="button" onclick="openModal('modal-rejestruj-zwrot')" class="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 cursor-pointer hover:underline">
+                        Zarejestruj własny zwrot
+                    </button>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- TAB 3: UCZESTNICY (MEMBERS VIEW) -->
+    <div id="tab-content-members" class="tab-pane hidden space-y-6">
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
+
+            <!-- Left: Members List & Invitation -->
+            <section class="lg:col-span-7 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+                <div class="border-b border-slate-200 dark:border-slate-800 px-5 py-4">
+                    <h2 class="font-display text-base font-semibold text-slate-900 dark:text-white">
+                        Uczestnicy grupy ({{ czlonkowie|length }})
+                    </h2>
+                    <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                        Zaproś znajomych podając ich adres e-mail zarejestrowany w systemie.
+                    </p>
+                </div>
+
+                <!-- Add Member Form -->
+                <form method="post" action="{{ url('core:dodaj_czlonka', pk=grupa.pk) }}" class="border-b border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 p-4">
+                    {{ csrf_input }}
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <input type="email" name="adres_email" required placeholder="Wpisz adres e-mail (np. znajomy@gmail.com)"
+                               class="h-10 flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                        <button type="submit" class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-slate-900 dark:bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-slate-800 dark:hover:bg-blue-500 whitespace-nowrap shrink-0 cursor-pointer shadow-xs">
+                            <i data-lucide="user-plus" class="h-4 w-4"></i>
+                            <span>Wyślij zaproszenie</span>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Members List -->
+                <div class="divide-y divide-slate-100 dark:divide-slate-800">
+                    {% for c in czlonkowie %}
+                    <div class="flex items-center justify-between px-5 py-3.5 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-xs text-slate-700 dark:text-slate-300">
+                                {{ c.imie[:2]|upper }}
+                            </span>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-semibold text-slate-900 dark:text-white truncate text-sm">{{ c.imie }}</span>
+                                    {% if c.pk == grupa.tworca_id %}
+                                    <span class="inline-flex items-center rounded-md bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 text-[11px] font-semibold text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60">
+                                        Twórca
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <span class="block truncate text-xs text-slate-500 dark:text-slate-400">{{ c.adres_email }}</span>
+                            </div>
+                        </div>
+
+                        {% if c.pk != grupa.tworca_id and c.pk != request.user.pk %}
+                        <form method="post" action="{{ url('core:usun_czlonka', pk=grupa.pk, user_pk=c.pk) }}" onsubmit="return confirm('Czy na pewno chcesz usunąć {{ c.imie }} z grupy?')">
+                            {{ csrf_input }}
+                            <button type="submit" class="rounded-lg p-1.5 text-slate-400 dark:text-slate-500 hover:bg-red-50 dark:hover:bg-red-950/60 hover:text-red-600 dark:hover:text-red-400 transition-colors cursor-pointer" title="Usuń z grupy">
+                                <i data-lucide="user-x" class="h-4 w-4"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <!-- Right: Group Settings -->
+            <section class="lg:col-span-5 space-y-6">
+
+                <!-- Edycja nazwy grupy -->
+                <div class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+                    <h2 class="font-display text-base font-semibold text-slate-900 dark:text-white mb-1">
+                        Ustawienia grupy
+                    </h2>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                        Zmień nazwę grupy rozliczeniowej.
+                    </p>
+
+                    <form method="post" action="{{ url('core:edytuj_grupe', pk=grupa.pk) }}" class="space-y-3">
+                        {{ csrf_input }}
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">
+                                Nazwa grupy
+                            </label>
+                            <input type="text" name="nazwa" value="{{ grupa.nazwa }}" required
+                                   class="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                        <div class="flex justify-end pt-2">
+                            <button type="submit" class="rounded-lg bg-slate-900 dark:bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:hover:bg-blue-500 cursor-pointer shadow-xs">
+                                Zapisz zmiany
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Usuwanie grupy -->
+                {% if request.user.pk == grupa.tworca_id %}
+                <div class="overflow-hidden rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50/40 dark:bg-red-950/20 p-5 shadow-xs">
+                    <h2 class="font-display text-base font-semibold text-red-900 dark:text-red-300 mb-1">
+                        Strefa niebezpieczna
+                    </h2>
+                    <p class="text-xs text-red-700 dark:text-red-400 mb-4">
+                        Usunięcie grupy spowoduje bezpowrotne skasowanie wszystkich powiązanych rachunków i historii rozliczeń.
+                    </p>
+                    <form method="post" action="{{ url('core:usun_grupe', pk=grupa.pk) }}" onsubmit="return confirm('Czy na pewno chcesz bezpowrotnie usunąć grupę \'{{ grupa.nazwa }}\'? Tej operacji nie można cofnąć!')">
+                        {{ csrf_input }}
+                        <button type="submit" class="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-xs font-semibold text-white hover:bg-red-700 transition-colors cursor-pointer shadow-xs">
+                            <i data-lucide="trash-2" class="h-3.5 w-3.5"></i>
+                            <span>Usuń tę grupę</span>
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+
+            </section>
+        </div>
+    </div>
+
 </div>
+
+<!-- Ukryty textarea z podsumowaniem do skopiowania -->
+<textarea id="hidden-shareable-summary" class="hidden">{{ podsumowanie_tekst }}</textarea>
+
+<script>
+    // Obsługa zakładek (Workspace Tabs)
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-pane').forEach(function(el) {
+            el.classList.add('hidden');
+        });
+        document.querySelectorAll('.tab-button').forEach(function(btn) {
+            btn.classList.remove('border-blue-600', 'text-blue-600', 'dark:text-blue-400', 'dark:border-blue-400');
+            btn.classList.add('border-transparent', 'text-slate-500', 'dark:text-slate-400');
+        });
+
+        const activePane = document.getElementById('tab-content-' + tabName);
+        const activeBtn = document.getElementById('tab-btn-' + tabName);
+        if (activePane && activeBtn) {
+            activePane.classList.remove('hidden');
+            activeBtn.classList.remove('border-transparent', 'text-slate-500', 'dark:text-slate-400');
+            activeBtn.classList.add('border-blue-600', 'text-blue-600', 'dark:text-blue-400', 'dark:border-blue-400');
+        }
+
+        // Aktualizacja URL bez przeładowania strony
+        const url = new URL(window.location);
+        url.searchParams.set('tab', tabName);
+        window.history.replaceState({}, '', url);
+
+        lucide.createIcons();
+    }
+
+    // Rozwijanie szczegółów podziału rachunku
+    function toggleDetails(elementId) {
+        const el = document.getElementById(elementId);
+        if (el) {
+            el.classList.toggle('hidden');
+        }
+    }
+
+    // Filtrowanie i wyszukiwanie wydatków
+    function filterExpenses() {
+        const query = (document.getElementById('expense-search-input')?.value || '').toLowerCase().trim();
+        const typeFilter = document.getElementById('expense-type-filter')?.value || 'all';
+        const items = document.querySelectorAll('.ledger-item');
+
+        items.forEach(function(item) {
+            const itemType = item.getAttribute('data-type');
+            const itemText = item.getAttribute('data-text') || '';
+
+            const matchesQuery = !query || itemText.includes(query);
+            const matchesType = (typeFilter === 'all') || (itemType === typeFilter);
+
+            if (matchesQuery && matchesType) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    // Kopiowanie opisu rozliczenia do schowka
+    async function copyShareableSummary() {
+        const summaryText = document.getElementById('hidden-shareable-summary')?.value || '';
+        const btnText = document.getElementById('copy-summary-text');
+        try {
+            await navigator.clipboard.writeText(summaryText);
+            if (btnText) {
+                const old = btnText.innerText;
+                btnText.innerText = 'Skopiowano!';
+                setTimeout(() => { btnText.innerText = old; }, 2200);
+            }
+        } catch(e) {
+            alert('Podsumowanie:\n\n' + summaryText);
+        }
+    }
+
+    // Inicjalizacja aktywnej zakładki na starcie
+    document.addEventListener("DOMContentLoaded", function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialTab = urlParams.get('tab') || '{{ aktywny_tab }}' || 'expenses';
+        switchTab(initialTab);
+    });
+</script>
 {% endblock %}

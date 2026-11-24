@@ -1,27 +1,86 @@
 {% extends "base.html" %}
-{% block title %}Rejestracja — SplitUs{% endblock %}
-{% block content %}
-<div class="auth-container">
-    <div class="auth-card">
-        <h1 class="auth-title">Utwórz konto</h1>
-        <p class="auth-sub">Zacznij dzielić wydatki ze znajomymi</p>
-        <form method="post" class="form">
+
+{% block title %}Rejestracja — PoRówno{% endblock %}
+
+{% block content_auth %}
+<div class="w-full max-w-md">
+    <div class="text-center mb-6">
+        <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-white font-bold text-xl shadow-md mb-3">
+            P
+        </span>
+        <h1 class="font-display text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Utwórz konto w PoRówno
+        </h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Zacznij dzielić wydatki bez zbędnych komplikacji
+        </p>
+    </div>
+
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-7 shadow-xs">
+        <form method="post" class="space-y-4">
             {{ csrf_input }}
-            {% for field in form %}
-            <div class="form-group">
-                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {{ field }}
-                {% if field.errors %}
-                <p class="form-error">{{ field.errors|join(', ') }}</p>
+
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5" for="id_imie">
+                    Imię lub ksywka
+                </label>
+                <input type="text" name="imie" id="id_imie" required placeholder="np. Bartek"
+                       class="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                {% if form.imie.errors %}
+                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ form.imie.errors|join(', ') }}</p>
                 {% endif %}
             </div>
-            {% endfor %}
+
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5" for="id_adres_email">
+                    Adres e-mail
+                </label>
+                <input type="email" name="adres_email" id="id_adres_email" required placeholder="twoj@email.pl"
+                       class="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                {% if form.adres_email.errors %}
+                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ form.adres_email.errors|join(', ') }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5" for="id_haslo">
+                    Hasło (min. 8 znaków)
+                </label>
+                <input type="password" name="haslo" id="id_haslo" required placeholder="Wpisz bezpieczne hasło"
+                       class="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                {% if form.haslo.errors %}
+                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ form.haslo.errors|join(', ') }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5" for="id_haslo2">
+                    Powtórz hasło
+                </label>
+                <input type="password" name="haslo2" id="id_haslo2" required placeholder="Powtórz hasło"
+                       class="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                {% if form.haslo2.errors %}
+                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ form.haslo2.errors|join(', ') }}</p>
+                {% endif %}
+            </div>
+
             {% if form.non_field_errors() %}
-            <p class="form-error">{{ form.non_field_errors()|join(', ') }}</p>
+            <div class="rounded-lg bg-red-50 dark:bg-red-950/40 p-3 text-xs font-medium text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
+                {{ form.non_field_errors()|join(', ') }}
+            </div>
             {% endif %}
-            <button type="submit" class="btn btn-primary btn-full">Zarejestruj się</button>
+
+            <button type="submit" class="w-full h-10 rounded-lg bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition-colors shadow-xs cursor-pointer">
+                Zarejestruj się
+            </button>
         </form>
-        <p class="auth-link">Masz już konto? <a href="{{ url('core:logowanie') }}">Zaloguj się</a></p>
+
+        <div class="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800 text-center text-xs text-slate-500 dark:text-slate-400">
+            Masz już konto?
+            <a href="{{ url('core:logowanie') }}" class="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline">
+                Zaloguj się
+            </a>
+        </div>
     </div>
 </div>
 {% endblock %}

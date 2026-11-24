@@ -1,0 +1,6 @@
+{
+  "name": "PoRówno — Rozliczanie rachunków",
+  "description": "Aplikacja do tworzenia grup znajomych, dodawania wspólnych rachunków, podziału kosztów i automatycznego wyliczania najprostszych przelewów rozliczeniowych.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

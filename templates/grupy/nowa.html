@@ -1,24 +1,46 @@
 {% extends "base.html" %}
-{% block title %}Nowa grupa — SplitUs{% endblock %}
+
+{% block title %}Nowa grupa — PoRówno{% endblock %}
+
 {% block content %}
-<div class="page-header">
-    <a href="{{ url('core:lista_grup') }}" class="back-link">← Grupy</a>
-    <h1>Nowa grupa</h1>
-</div>
-<div class="form-card">
-    <form method="post" class="form">
-        {{ csrf_input }}
-        {% for field in form %}
-        <div class="form-group">
-            <label class="form-label">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}<p class="form-error">{{ field.errors|join(', ') }}</p>{% endif %}
-        </div>
-        {% endfor %}
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">Utwórz grupę</button>
-            <a href="{{ url('core:lista_grup') }}" class="btn btn-outline">Anuluj</a>
-        </div>
-    </form>
+<div class="mx-auto max-w-md">
+    <div class="mb-4">
+        <a href="{{ url('core:lista_grup') }}" class="text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 no-underline inline-flex items-center gap-1">
+            <i data-lucide="arrow-left" class="h-3.5 w-3.5"></i>
+            Wróć do grup
+        </a>
+    </div>
+
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-7 shadow-xs">
+        <h1 class="font-display text-xl font-bold text-slate-900 dark:text-white mb-1">
+            Utwórz nową grupę
+        </h1>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mb-5">
+            Podaj nazwę dla wspólnego wyjazdu, mieszkania lub projektu.
+        </p>
+
+        <form method="post" class="space-y-4">
+            {{ csrf_input }}
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5" for="id_nazwa">
+                    Nazwa grupy
+                </label>
+                <input type="text" name="nazwa" id="id_nazwa" required autofocus placeholder="np. Wakacje w Chorwacji, Mieszkanie..."
+                       class="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                {% if form.nazwa.errors %}
+                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ form.nazwa.errors|join(', ') }}</p>
+                {% endif %}
+            </div>
+
+            <div class="flex justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <a href="{{ url('core:lista_grup') }}" class="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 no-underline">
+                    Anuluj
+                </a>
+                <button type="submit" class="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 shadow-xs cursor-pointer">
+                    Utwórz grupę
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
 {% endblock %}

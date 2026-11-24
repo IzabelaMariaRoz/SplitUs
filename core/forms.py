@@ -55,7 +55,10 @@ class GrupaForm(forms.ModelForm):
         model = Grupa
         fields = ["nazwa"]
         widgets = {
-            "nazwa": forms.TextInput(attrs={"placeholder": "Np. Wakacje 2025, Mieszkanie..."}),
+            "nazwa": forms.TextInput(attrs={
+                "placeholder": "Np. Wakacje 2025, Mieszkanie...",
+                "class": "h-10 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+            }),
         }
 
 
@@ -63,7 +66,10 @@ class DodajCzlonkaForm(forms.Form):
     """Formularz dodawania członka do grupy przez e-mail."""
     adres_email = forms.EmailField(
         label="Adres e-mail użytkownika",
-        widget=forms.EmailInput(attrs={"placeholder": "adres@email.pl"}),
+        widget=forms.EmailInput(attrs={
+            "placeholder": "adres@email.pl",
+            "class": "h-10 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+        }),
     )
 
 
@@ -73,8 +79,19 @@ class WydatekForm(forms.ModelForm):
         model = Wydatek
         fields = ["tytul", "kwota", "platnik"]
         widgets = {
-            "tytul": forms.TextInput(attrs={"placeholder": "Np. Obiad, Paliwo..."}),
-            "kwota": forms.NumberInput(attrs={"placeholder": "0.00", "step": "0.01", "min": "0.01"}),
+            "tytul": forms.TextInput(attrs={
+                "placeholder": "Np. Obiad, Paliwo...",
+                "class": "h-10 w-full rounded-lg border border-slate-200 bg-white px-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+            }),
+            "kwota": forms.NumberInput(attrs={
+                "placeholder": "0.00",
+                "step": "0.01",
+                "min": "0.01",
+                "class": "h-10 w-full rounded-lg border border-slate-200 bg-white pl-3.5 pr-10 font-mono text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+            }),
+            "platnik": forms.Select(attrs={
+                "class": "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer"
+            }),
         }
 
     def __init__(self, *args, grupa=None, **kwargs):
@@ -90,7 +107,18 @@ class SplataForm(forms.ModelForm):
         model = Splata
         fields = ["platnik", "odbiorca", "kwota"]
         widgets = {
-            "kwota": forms.NumberInput(attrs={"placeholder": "0.00", "step": "0.01", "min": "0.01"}),
+            "kwota": forms.NumberInput(attrs={
+                "placeholder": "0.00",
+                "step": "0.01",
+                "min": "0.01",
+                "class": "h-10 w-full rounded-lg border border-slate-200 bg-white pl-3.5 pr-10 font-mono text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+            }),
+            "platnik": forms.Select(attrs={
+                "class": "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer"
+            }),
+            "odbiorca": forms.Select(attrs={
+                "class": "h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer"
+            }),
         }
 
     def __init__(self, *args, grupa=None, user=None, **kwargs):

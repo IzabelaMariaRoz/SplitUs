@@ -31,12 +31,20 @@ def environment(**options):
             status=Zaproszenie.STATUS_OCZEKUJACE
         ).count()
 
+    def user_groups(request):
+        """Zwraca listę grup ze statystykami do paska bocznego."""
+        if not request or not request.user.is_authenticated:
+            return []
+        from core.repositories import GrupaRepository
+        return GrupaRepository.pobierz_grupy_ze_statystykami(request.user)
+
     env.globals.update(
         {
             "static": static,
             "url": url,
             "get_messages": messages.get_messages,
             "pending_invitations": pending_invitations,
+            "user_groups": user_groups,
         }
     )
     return env

@@ -1,54 +1,479 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="pl" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="SplitUs — aplikacja do podziału wydatków grupowych">
-    <title>{% block title %}SplitUs{% endblock %}</title>
-    <link rel="stylesheet" href="{{ static('css/main.css') }}">
+    <meta name="description" content="PoRówno — nowoczesna aplikacja do rozliczania rachunków i wydatków w grupie znajomych">
+    <title>{% block title %}PoRówno — Rozliczanie rachunków{% endblock %}</title>
+
+    <!-- Skrypt sprawdzający zapisany motyw natychmiast (zapobiega migotaniu jasnego motywu) -->
+    <script>
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS Play CDN z obsługą darkMode: 'class' -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
+                        display: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        .tabular-nums {
+            font-variant-numeric: tabular-nums;
+        }
+    </style>
 </head>
-<body>
+<body class="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased selection:bg-blue-100 selection:text-blue-900 flex flex-col transition-colors duration-150">
 
-<div class="layout">
-    {% if request.user.is_authenticated %}
-    <nav class="sidebar">
-        <div class="sidebar-brand">
-            <span class="brand-icon">💸</span>
-            <span class="brand-name">SplitUs</span>
-        </div>
-        <ul class="sidebar-nav">
-            <li>
-                <a href="{{ url('core:lista_grup') }}"
-                   class="nav-link {% if request.resolver_match.url_name == 'lista_grup' %}active{% endif %}">
-                    👥 Grupy
+{% if request.user.is_authenticated %}
+<div class="flex min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+
+    <!-- Mobile Drawer Overlay -->
+    <div id="mobile-sidebar-backdrop" class="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-[1px] hidden lg:hidden" onclick="toggleMobileSidebar()"></div>
+
+    <!-- Sidebar Desktop & Mobile Slide-over -->
+    <aside id="sidebar-drawer" class="fixed inset-y-0 left-0 z-50 w-[272px] -translate-x-full lg:translate-x-0 transition-transform duration-200 ease-in-out lg:static lg:w-[272px] lg:shrink-0">
+        <div class="flex h-full flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-colors">
+
+            <!-- Brand header -->
+            <div class="flex h-16 items-center justify-between border-b border-slate-200 dark:border-slate-800 px-5">
+                <a href="{{ url('core:lista_grup') }}" class="flex items-center gap-2 text-slate-900 dark:text-white no-underline">
+                    <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white font-bold text-base shadow-xs">
+                        P
+                    </span>
+                    <span class="font-display text-lg font-bold tracking-tight text-slate-900 dark:text-white whitespace-nowrap">
+                        PoRówno
+                    </span>
                 </a>
-            </li>
-            <li>
-                {% set count = pending_invitations(request) %}
-                <a href="{{ url('core:lista_zaproszen') }}"
-                   class="nav-link {% if request.resolver_match.url_name == 'lista_zaproszen' %}active{% endif %}">
-                    📬 Zaproszenia
-                    {% if count > 0 %}
-                    <span class="nav-badge">{{ count }}</span>
+                <div class="flex items-center gap-1">
+                    <button type="button" onclick="toggleDarkMode()" aria-label="Przełącz motyw" title="Przełącz ciemny/jasny motyw" class="theme-toggle-btn rounded-lg p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer lg:hidden">
+                        <i data-lucide="moon" class="h-4 w-4 block dark:hidden"></i>
+                        <i data-lucide="sun" class="h-4 w-4 hidden dark:block"></i>
+                    </button>
+                    <button type="button" onclick="toggleMobileSidebar()" aria-label="Zamknij menu" class="rounded-lg p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white lg:hidden">
+                        <i data-lucide="x" class="h-5 w-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Create Group CTA -->
+            <div class="p-4">
+                <button type="button" onclick="openModal('modal-nowa-grupa')" class="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 dark:bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 dark:hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900 whitespace-nowrap shrink-0 cursor-pointer shadow-xs">
+                    <i data-lucide="plus" class="h-4 w-4 shrink-0"></i>
+                    <span>Nowa grupa</span>
+                </button>
+            </div>
+
+            <!-- Group list -->
+            {% set groups_list = user_groups(request) %}
+            <div class="flex-1 overflow-y-auto px-3 pb-4">
+                <div class="px-2 pb-2 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                    Twoje grupy ({{ groups_list|length }})
+                </div>
+
+                {% if groups_list %}
+                <nav aria-label="Lista grup" class="space-y-1">
+                    {% for item in groups_list %}
+                    {% set is_active = (grupa is defined and grupa and grupa.pk == item.id) %}
+                    <a href="{{ url('core:szczegoly_grupy', pk=item.id) }}"
+                       class="group flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors cursor-pointer no-underline {% if is_active %}bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold{% else %}text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white{% endif %}">
+                        <span class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md border {% if is_active %}border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs{% else %}border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 group-hover:bg-white dark:group-hover:bg-slate-700{% endif %}">
+                            <i data-lucide="users" class="h-4 w-4 shrink-0"></i>
+                        </span>
+                        <span class="min-w-0 flex-1">
+                            <span class="block truncate text-sm {% if is_active %}font-semibold text-slate-900 dark:text-white{% else %}font-medium text-slate-800 dark:text-slate-200{% endif %}">
+                                {{ item.nazwa }}
+                            </span>
+                            <span class="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-normal">
+                                <span>{{ item.czlonkowie_count }} os.</span>
+                                <span aria-hidden="true">·</span>
+                                <span class="font-mono tabular-nums truncate text-slate-600 dark:text-slate-400">
+                                    {{ "%.2f"|format(item.suma_wydatkow) }} zł
+                                </span>
+                            </span>
+                        </span>
+                    </a>
+                    {% endfor %}
+                </nav>
+                {% else %}
+                <div class="rounded-lg border border-dashed border-slate-200 dark:border-slate-800 px-3 py-6 text-center text-xs text-slate-500 dark:text-slate-400">
+                    Brak grup. Utwórz pierwszą grupę, aby zacząć dodawać rachunki.
+                </div>
+                {% endif %}
+
+                <!-- Section: Zaproszenia -->
+                {% set inv_count = pending_invitations(request) %}
+                <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 px-1">
+                    <a href="{{ url('core:lista_zaproszen') }}" class="flex items-center justify-between rounded-lg px-2.5 py-2 text-sm font-medium transition-colors no-underline {% if request.resolver_match.url_name == 'lista_zaproszen' %}bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-semibold{% else %}text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white{% endif %}">
+                        <div class="flex items-center gap-2.5">
+                            <i data-lucide="mail" class="h-4 w-4"></i>
+                            <span>Zaproszenia</span>
+                        </div>
+                        {% if inv_count > 0 %}
+                        <span class="inline-flex items-center justify-center rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">
+                            {{ inv_count }}
+                        </span>
+                        {% endif %}
+                    </a>
+                </div>
+            </div>
+
+            <!-- Bottom User Profile Footer -->
+            <div class="border-t border-slate-200 dark:border-slate-800 p-4">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 dark:bg-slate-800 text-white font-semibold text-xs shadow-xs border border-transparent dark:border-slate-700">
+                            {{ request.user.imie[:2]|upper }}
+                        </span>
+                        <div class="min-w-0">
+                            <span class="block truncate text-sm font-semibold text-slate-900 dark:text-white leading-tight">
+                                {{ request.user.imie }}
+                            </span>
+                            <span class="block truncate text-xs text-slate-500 dark:text-slate-400">
+                                {{ request.user.adres_email }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                        <button type="button" onclick="toggleDarkMode()" aria-label="Przełącz motyw" title="Przełącz ciemny/jasny motyw" class="theme-toggle-btn rounded-lg p-1.5 text-slate-400 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer">
+                            <i data-lucide="moon" class="h-4 w-4 block dark:hidden"></i>
+                            <i data-lucide="sun" class="h-4 w-4 hidden dark:block"></i>
+                        </button>
+                        <a href="{{ url('core:wylogowanie') }}" title="Wyloguj się" class="rounded-lg p-1.5 text-slate-400 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer">
+                            <i data-lucide="log-out" class="h-4 w-4"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="flex min-w-0 flex-1 flex-col">
+
+        <!-- TopBar Header -->
+        <header class="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 px-4 backdrop-blur-xs sm:px-6 lg:px-8 transition-colors">
+            <!-- Left: Mobile menu button + Breadcrumb -->
+            <div class="flex min-w-0 items-center gap-3">
+                <button type="button" onclick="toggleMobileSidebar()" aria-label="Otwórz menu grup" class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 lg:hidden shrink-0 cursor-pointer">
+                    <i data-lucide="menu" class="h-5 w-5"></i>
+                </button>
+
+                <nav aria-label="Ścieżka nawigacji" class="flex min-w-0 items-center gap-2 text-sm">
+                    <a href="{{ url('core:lista_grup') }}" class="font-medium text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 whitespace-nowrap shrink-0 no-underline">
+                        Grupy
+                    </a>
+                    {% if grupa is defined and grupa %}
+                    <span class="text-slate-300 dark:text-slate-700 shrink-0" aria-hidden="true">/</span>
+                    <span class="truncate font-semibold text-slate-900 dark:text-white">
+                        {{ grupa.nazwa }}
+                    </span>
                     {% endif %}
-                </a>
-            </li>
-        </ul>
-        <div class="sidebar-footer">
-            <span class="sidebar-user">{{ request.user.imie }}</span>
-            <a href="{{ url('core:wylogowanie') }}" class="btn-logout">Wyloguj</a>
-        </div>
-    </nav>
-    {% endif %}
+                </nav>
+            </div>
 
-    <main class="main-content {% if not request.user.is_authenticated %}full-width{% endif %}">
-        {% for message in get_messages(request) %}
-        <div class="alert alert--{{ message.tags }}">{{ message }}</div>
-        {% endfor %}
+            <!-- Right: Primary Actions & Dark Mode Toggle -->
+            <div class="flex items-center gap-2.5 shrink-0">
+                <button type="button" onclick="toggleDarkMode()" aria-label="Przełącz motyw" title="Przełącz ciemny/jasny motyw" class="hidden sm:inline-flex items-center justify-center h-9 w-9 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer shadow-2xs">
+                    <i data-lucide="moon" class="h-4 w-4 block dark:hidden"></i>
+                    <i data-lucide="sun" class="h-4 w-4 hidden dark:block"></i>
+                </button>
 
-        {% block content %}{% endblock %}
-    </main>
+                {% if grupa is defined and grupa %}
+                <button type="button" onclick="openModal('modal-rejestruj-zwrot')" class="hidden sm:inline-flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-sm font-medium text-slate-700 dark:text-slate-200 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white whitespace-nowrap shrink-0 cursor-pointer shadow-2xs">
+                    <i data-lucide="arrow-right-left" class="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400"></i>
+                    <span>Zarejestruj zwrot</span>
+                </button>
+
+                <button type="button" onclick="openModal('modal-dodaj-rachunek')" class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 whitespace-nowrap shrink-0 cursor-pointer shadow-xs">
+                    <i data-lucide="plus" class="h-4 w-4 shrink-0"></i>
+                    <span>Dodaj rachunek</span>
+                </button>
+                {% endif %}
+            </div>
+        </header>
+
+        <!-- Main Body -->
+        <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
+
+            <!-- Flash messages -->
+            {% for message in get_messages(request) %}
+            <div class="mb-6 flex items-center justify-between gap-3 rounded-xl border p-4 text-sm shadow-2xs {% if message.tags == 'error' %}border-red-200 dark:border-red-800/80 bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300{% elif message.tags == 'warning' %}border-amber-200 dark:border-amber-800/80 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300{% else %}border-emerald-200 dark:border-emerald-800/80 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300{% endif %}">
+                <div class="flex items-center gap-2.5">
+                    {% if message.tags == 'error' %}
+                    <i data-lucide="alert-circle" class="h-5 w-5 shrink-0 text-red-600 dark:text-red-400"></i>
+                    {% elif message.tags == 'warning' %}
+                    <i data-lucide="alert-triangle" class="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400"></i>
+                    {% else %}
+                    <i data-lucide="check-circle" class="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400"></i>
+                    {% endif %}
+                    <span>{{ message }}</span>
+                </div>
+                <button type="button" onclick="this.parentElement.remove()" class="rounded-md p-1 opacity-70 hover:opacity-100 cursor-pointer">
+                    <i data-lucide="x" class="h-4 w-4"></i>
+                </button>
+            </div>
+            {% endfor %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
 </div>
+
+<!-- Modal: Nowa Grupa -->
+<div id="modal-nowa-grupa" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-[1px] hidden" role="dialog" aria-modal="true">
+    <div class="w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-6 py-4">
+            <h2 class="font-display text-lg font-semibold text-slate-900 dark:text-white">
+                Nowa grupa rozliczeniowa
+            </h2>
+            <button type="button" onclick="closeModal('modal-nowa-grupa')" aria-label="Zamknij okno" class="rounded-lg p-2 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer">
+                <i data-lucide="x" class="h-5 w-5"></i>
+            </button>
+        </div>
+        <form method="post" action="{{ url('core:nowa_grupa') }}" class="p-6 space-y-4">
+            {{ csrf_input }}
+            <div>
+                <label for="id_nazwa_nowa" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                    Nazwa grupy
+                </label>
+                <input type="text" name="nazwa" id="id_nazwa_nowa" required placeholder="np. Wyjazd w góry, Mieszkanie..."
+                       class="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+            </div>
+            <div class="flex justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button type="button" onclick="closeModal('modal-nowa-grupa')" class="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
+                    Anuluj
+                </button>
+                <button type="submit" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 cursor-pointer shadow-xs">
+                    Utwórz grupę
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if grupa is defined and grupa %}
+<!-- Modal: Dodaj Rachunek -->
+<div id="modal-dodaj-rachunek" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-[1px] hidden" role="dialog" aria-modal="true">
+    <div class="w-full max-w-lg rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-6 py-4">
+            <h2 class="font-display text-lg font-semibold text-slate-900 dark:text-white">
+                Dodaj nowy rachunek
+            </h2>
+            <button type="button" onclick="closeModal('modal-dodaj-rachunek')" aria-label="Zamknij okno" class="rounded-lg p-2 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer">
+                <i data-lucide="x" class="h-5 w-5"></i>
+            </button>
+        </div>
+        <form method="post" action="{{ url('core:nowy_wydatek', pk=grupa.pk) }}" class="p-6 space-y-4">
+            {{ csrf_input }}
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                    Tytuł rachunku
+                </label>
+                <input type="text" name="tytul" required placeholder="np. Zakupy Biedronka, Paliwo, Obiad"
+                       class="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                        Kwota (PLN)
+                    </label>
+                    <div class="relative">
+                        <input type="number" step="0.01" min="0.01" name="kwota" required placeholder="0.00"
+                               class="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-3.5 pr-10 font-mono text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                        <span class="absolute right-3 top-2.5 font-mono text-xs text-slate-500 dark:text-slate-400">zł</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                        Kto zapłacił?
+                    </label>
+                    <select name="platnik" required class="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer">
+                        {% for c in czlonkowie %}
+                        <option value="{{ c.pk }}" {% if c.pk == request.user.pk %}selected{% endif %}>{{ c.imie }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="rounded-lg bg-slate-50 dark:bg-slate-800/60 p-3 text-xs text-slate-500 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/60">
+                <p>Koszt zostanie podzielony <strong>po równo</strong> między wszystkich aktualnych członków grupy ({{ czlonkowie|length }} os.).</p>
+            </div>
+
+            <div class="flex justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button type="button" onclick="closeModal('modal-dodaj-rachunek')" class="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
+                    Anuluj
+                </button>
+                <button type="submit" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 cursor-pointer shadow-xs">
+                    Zapisz rachunek
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Rejestruj Zwrot -->
+<div id="modal-rejestruj-zwrot" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-[1px] hidden" role="dialog" aria-modal="true">
+    <div class="w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-6 py-4">
+            <h2 class="font-display text-lg font-semibold text-slate-900 dark:text-white">
+                Zarejestruj zwrot pieniędzy
+            </h2>
+            <button type="button" onclick="closeModal('modal-rejestruj-zwrot')" aria-label="Zamknij okno" class="rounded-lg p-2 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer">
+                <i data-lucide="x" class="h-5 w-5"></i>
+            </button>
+        </div>
+        <form method="post" action="{{ url('core:nowa_splata', pk=grupa.pk) }}" class="p-6 space-y-4">
+            {{ csrf_input }}
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                    Kto oddaje pieniądze?
+                </label>
+                <select name="platnik" id="splata_platnik_select" required class="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer">
+                    {% for c in czlonkowie %}
+                    <option value="{{ c.pk }}" {% if c.pk == request.user.pk %}selected{% endif %}>{{ c.imie }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                    Komu oddaje?
+                </label>
+                <select name="odbiorca" id="splata_odbiorca_select" required class="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none cursor-pointer">
+                    {% for c in czlonkowie %}
+                    <option value="{{ c.pk }}" {% if c.pk != request.user.pk %}selected{% endif %}>{{ c.imie }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                    Kwota zwrotu (PLN)
+                </label>
+                <div class="relative">
+                    <input type="number" step="0.01" min="0.01" name="kwota" id="splata_kwota_input" required placeholder="0.00"
+                           class="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-3.5 pr-10 font-mono text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                    <span class="absolute right-3 top-2.5 font-mono text-xs text-slate-500 dark:text-slate-400">zł</span>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button type="button" onclick="closeModal('modal-rejestruj-zwrot')" class="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
+                    Anuluj
+                </button>
+                <button type="submit" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 cursor-pointer shadow-xs">
+                    Zapisz zwrot
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<!-- Widok dla niezalogowanych (Auth) -->
+<main class="min-h-screen flex flex-col justify-center items-center p-4 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
+    <div class="absolute top-5 right-5">
+        <button type="button" onclick="toggleDarkMode()" aria-label="Przełącz motyw" title="Przełącz ciemny/jasny motyw" class="theme-toggle-btn rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer shadow-2xs">
+            <i data-lucide="moon" class="h-5 w-5 block dark:hidden"></i>
+            <i data-lucide="sun" class="h-5 w-5 hidden dark:block"></i>
+        </button>
+    </div>
+    {% for message in get_messages(request) %}
+    <div class="mb-4 w-full max-w-md rounded-xl border p-4 text-sm {% if message.tags == 'error' %}border-red-200 dark:border-red-800/80 bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-300{% else %}border-blue-200 dark:border-blue-800/80 bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300{% endif %}">
+        {{ message }}
+    </div>
+    {% endfor %}
+    {% block content_auth %}{% endblock %}
+</main>
+{% endif %}
+
+<script>
+    // Funkcja przełączania ciemnego motywu
+    function toggleDarkMode() {
+        const isDark = document.documentElement.classList.toggle('dark');
+        if (isDark) {
+            localStorage.setItem('theme', 'dark');
+        } else {
+            localStorage.setItem('theme', 'light');
+        }
+        lucide.createIcons();
+    }
+
+    // Inicjalizacja ikon Lucide
+    document.addEventListener("DOMContentLoaded", function() {
+        lucide.createIcons();
+    });
+
+    // Mobilny Sidebar
+    function toggleMobileSidebar() {
+        const sidebar = document.getElementById('sidebar-drawer');
+        const backdrop = document.getElementById('mobile-sidebar-backdrop');
+        if (sidebar && backdrop) {
+            const isClosed = sidebar.classList.contains('-translate-x-full');
+            if (isClosed) {
+                sidebar.classList.remove('-translate-x-full');
+                backdrop.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                backdrop.classList.add('hidden');
+            }
+        }
+    }
+
+    // Zarządzanie modalami
+    function openModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.remove('hidden');
+            lucide.createIcons();
+        }
+    }
+
+    function closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    }
+
+    // Zamknięcie modala klawiszem Escape
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            document.querySelectorAll('[role="dialog"]').forEach(function(modal) {
+                modal.classList.add('hidden');
+            });
+        }
+    });
+</script>
 
 </body>
 </html>

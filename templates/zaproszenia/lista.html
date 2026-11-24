@@ -1,47 +1,74 @@
 {% extends "base.html" %}
-{% block title %}Zaproszenia — SplitUs{% endblock %}
-{% block content %}
-<div class="page-header">
-    <h1>Zaproszenia do grup</h1>
-</div>
 
-{% if zaproszenia %}
-<div class="card">
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Grupa</th>
-                <th>Zapraszający</th>
-                <th>Data</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
+{% block title %}Zaproszenia — PoRówno{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="border-b border-slate-200 dark:border-slate-800 pb-4">
+        <h1 class="font-display text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+            Zaproszenia do grup
+        </h1>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Zaakceptuj zaproszenie, aby wspólnie rozliczać wydatki z przyjaciółmi.
+        </p>
+    </div>
+
+    {% if zaproszenia %}
+    <div class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+        <div class="divide-y divide-slate-100 dark:divide-slate-800">
             {% for z in zaproszenia %}
-            <tr>
-                <td><strong>{{ z.grupa.nazwa }}</strong></td>
-                <td>{{ z.zapraszajacy.imie }}</td>
-                <td>{{ z.data_wyslania.strftime('%d.%m.%Y') }}</td>
-                <td class="actions">
-                    <form method="post" action="{{ url('core:akceptuj_zaproszenie', pk=z.pk) }}" style="display:inline">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between p-5 gap-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
+                <div class="flex items-start gap-4">
+                    <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+                        <i data-lucide="mail" class="h-5 w-5"></i>
+                    </span>
+                    <div>
+                        <h3 class="font-display text-base font-bold text-slate-900 dark:text-white">
+                            {{ z.grupa.nazwa }}
+                        </h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            Zaproszenie od: <strong class="font-medium text-slate-800 dark:text-slate-200">{{ z.zapraszajacy.imie }}</strong> ({{ z.zapraszajacy.adres_email }})
+                        </p>
+                        <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1">
+                            Wysłano: {{ z.data_wyslania.strftime('%d.%m.%Y, %H:%M') }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2.5 sm:self-center">
+                    <form method="post" action="{{ url('core:odrzuc_zaproszenie', pk=z.pk) }}">
                         {{ csrf_input }}
-                        <button type="submit" class="btn btn-sm btn-primary">✓ Dołącz</button>
+                        <button type="submit" class="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer shadow-2xs">
+                            Odrzuć
+                        </button>
                     </form>
-                    <form method="post" action="{{ url('core:odrzuc_zaproszenie', pk=z.pk) }}" style="display:inline">
+                    <form method="post" action="{{ url('core:akceptuj_zaproszenie', pk=z.pk) }}">
                         {{ csrf_input }}
-                        <button type="submit" class="btn btn-sm btn-outline">✕ Odrzuć</button>
+                        <button type="submit" class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700 transition-colors cursor-pointer shadow-xs">
+                            <i data-lucide="check" class="h-3.5 w-3.5"></i>
+                            <span>Dołącz do grupy</span>
+                        </button>
                     </form>
-                </td>
-            </tr>
+                </div>
+            </div>
             {% endfor %}
-        </tbody>
-    </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-12 text-center shadow-xs">
+        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700">
+            <i data-lucide="mail" class="h-6 w-6"></i>
+        </div>
+        <h3 class="mt-4 font-display text-base font-semibold text-slate-900 dark:text-white">
+            Brak oczekujących zaproszeń
+        </h3>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+            Gdy ktoś zaprosi Cię do nowej grupy, zobaczysz powiadomienie w tym miejscu.
+        </p>
+        <a href="{{ url('core:lista_grup') }}" class="mt-5 inline-flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors no-underline">
+            ← Wróć do grup
+        </a>
+    </div>
+    {% endif %}
 </div>
-{% else %}
-<div class="empty-state">
-    <p class="empty-icon">📬</p>
-    <p>Brak oczekujących zaproszeń.</p>
-    <a href="{{ url('core:lista_grup') }}" class="btn btn-outline">Wróć do grup</a>
-</div>
-{% endif %}
 {% endblock %}

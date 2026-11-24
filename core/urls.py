@@ -14,6 +14,7 @@ urlpatterns = [
     path("grupy/", views.lista_grup, name="lista_grup"),
     path("grupy/nowa/", views.nowa_grupa, name="nowa_grupa"),
     path("grupy/<int:pk>/", views.szczegoly_grupy, name="szczegoly_grupy"),
+    path("grupy/<int:pk>/edytuj/", views.edytuj_grupe, name="edytuj_grupe"),
     path("grupy/<int:pk>/usun/", views.usun_grupe, name="usun_grupe"),
     path("grupy/<int:pk>/dodaj-czlonka/", views.dodaj_czlonka, name="dodaj_czlonka"),
     path("grupy/<int:pk>/usun-czlonka/<int:user_pk>/", views.usun_czlonka, name="usun_czlonka"),
@@ -27,6 +28,8 @@ urlpatterns = [
     path("grupy/<int:pk>/bilans/", views.bilans_grupy, name="bilans_grupy"),
     path("grupy/<int:pk>/historia/", views.historia_grupy, name="historia_grupy"),
     path("grupy/<int:pk>/splata/", views.nowa_splata, name="nowa_splata"),
+    path("grupy/<int:pk>/szybka-splata/", views.szybka_splata, name="szybka_splata"),
+    path("splaty/<int:pk>/usun/", views.usun_splate, name="usun_splate"),
     path("splaty/<int:pk>/ureguluj/", views.ureguluj_splate, name="ureguluj_splate"),
     # Zaproszenia
     path("zaproszenia/", views.lista_zaproszen, name="lista_zaproszen"),

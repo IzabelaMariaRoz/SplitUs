@@ -1,32 +1,22 @@
 {% extends "base.html" %}
-{% block title %}Moje grupy — SplitUs{% endblock %}
-{% block content %}
-<div class="page-header">
-    <h1>Moje grupy</h1>
-    <a href="{{ url('core:nowa_grupa') }}" class="btn btn-primary">+ Nowa grupa</a>
-</div>
 
-{% if grupy %}
-<div class="card-grid">
-    {% for grupa in grupy %}
-    <div class="card">
-        <div class="card-body">
-            <h2 class="card-title">{{ grupa.nazwa }}</h2>
-            <p class="card-meta">Utworzona: {{ grupa.data_utworzenia }}</p>
-            <p class="card-meta">Członkowie: {{ grupa.czlonkowie.count() }}</p>
-        </div>
-        <div class="card-footer">
-            <a href="{{ url('core:szczegoly_grupy', pk=grupa.pk) }}" class="btn btn-secondary">Szczegóły</a>
-            <a href="{{ url('core:bilans_grupy', pk=grupa.pk) }}" class="btn btn-outline">Bilans</a>
-        </div>
+{% block title %}PoRówno — Twoje grupy{% endblock %}
+
+{% block content %}
+<div class="mx-auto mt-12 max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 text-center shadow-xs">
+    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-2xs">
+        <i data-lucide="users" class="h-7 w-7 text-blue-600 dark:text-blue-400"></i>
     </div>
-    {% endfor %}
+    <h1 class="mt-4 font-display text-xl font-bold text-slate-900 dark:text-white">
+        Utwórz pierwszą grupę znajomych
+    </h1>
+    <p class="mt-2 text-sm text-slate-500 dark:text-slate-400 text-balance leading-relaxed">
+        Dodaj uczestników wyjazdu, wspólnego mieszkania lub imprezy, zapisuj rachunki i sprawdź kto komu ile powinien oddać.
+    </p>
+    <button type="button" onclick="openModal('modal-nowa-grupa')"
+            class="mt-6 inline-flex items-center gap-2 rounded-lg bg-slate-900 dark:bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 dark:hover:bg-blue-500 transition-colors cursor-pointer shadow-xs">
+        <i data-lucide="plus" class="h-4 w-4"></i>
+        <span>Nowa grupa</span>
+    </button>
 </div>
-{% else %}
-<div class="empty-state">
-    <p class="empty-icon">👥</p>
-    <p>Nie należysz jeszcze do żadnej grupy.</p>
-    <a href="{{ url('core:nowa_grupa') }}" class="btn btn-primary">Utwórz pierwszą grupę</a>
-</div>
-{% endif %}
 {% endblock %}

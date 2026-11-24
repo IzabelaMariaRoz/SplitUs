@@ -1,32 +1,64 @@
 {% extends "base.html" %}
-{% block title %}Logowanie — SplitUs{% endblock %}
-{% block content %}
-<div class="auth-container">
-    <div class="auth-card">
-        <h1 class="auth-title">Logowanie</h1>
-        <p class="auth-sub">Witaj z powrotem w SplitUs</p>
-        <form method="post" class="form">
+
+{% block title %}Logowanie — PoRówno{% endblock %}
+
+{% block content_auth %}
+<div class="w-full max-w-md">
+    <div class="text-center mb-6">
+        <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-white font-bold text-xl shadow-md mb-3">
+            P
+        </span>
+        <h1 class="font-display text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Zaloguj się do PoRówno
+        </h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Wygodne rozliczanie wydatków ze znajomymi
+        </p>
+    </div>
+
+    <div class="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-7 shadow-xs">
+        <form method="post" class="space-y-4">
             {{ csrf_input }}
-            <div class="form-group">
-                <label class="form-label" for="id_username">Adres e-mail</label>
-                {{ form.username }}
+
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5" for="id_username">
+                    Adres e-mail
+                </label>
+                <input type="email" name="username" id="id_username" required autofocus placeholder="twoj@email.pl"
+                       class="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none">
                 {% if form.username.errors %}
-                <p class="form-error">{{ form.username.errors|join(', ') }}</p>
+                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ form.username.errors|join(', ') }}</p>
                 {% endif %}
             </div>
-            <div class="form-group">
-                <label class="form-label" for="id_password">Hasło</label>
-                {{ form.password }}
+
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5" for="id_password">
+                    Hasło
+                </label>
+                <input type="password" name="password" id="id_password" required placeholder="Wpisz hasło"
+                       class="h-10 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none">
                 {% if form.password.errors %}
-                <p class="form-error">{{ form.password.errors|join(', ') }}</p>
+                <p class="mt-1 text-xs text-red-600 dark:text-red-400">{{ form.password.errors|join(', ') }}</p>
                 {% endif %}
             </div>
+
             {% if form.non_field_errors() %}
-            <p class="form-error">{{ form.non_field_errors()|join(', ') }}</p>
+            <div class="rounded-lg bg-red-50 dark:bg-red-950/40 p-3 text-xs font-medium text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800">
+                {{ form.non_field_errors()|join(', ') }}
+            </div>
             {% endif %}
-            <button type="submit" class="btn btn-primary btn-full">Zaloguj się</button>
+
+            <button type="submit" class="w-full h-10 rounded-lg bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition-colors shadow-xs cursor-pointer">
+                Zaloguj się
+            </button>
         </form>
-        <p class="auth-link">Nie masz konta? <a href="{{ url('core:rejestracja') }}">Zarejestruj się</a></p>
+
+        <div class="mt-6 pt-5 border-t border-slate-100 dark:border-slate-800 text-center text-xs text-slate-500 dark:text-slate-400">
+            Nie masz jeszcze konta?
+            <a href="{{ url('core:rejestracja') }}" class="font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline">
+                Zarejestruj się
+            </a>
+        </div>
     </div>
 </div>
 {% endblock %}

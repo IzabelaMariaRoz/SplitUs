@@ -1,6 +1,10 @@
+from decimal import Decimal
+
 from django.contrib import auth, messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from .forms import (
@@ -11,7 +15,23 @@ from .forms import (
     SplataForm,
     WydatekForm,
 )
-from .models import Grupa, MenedzerRozliczen, Splata, Uzytkownik, Wydatek, Zaproszenie
+from .models import Grupa, Splata, Uzytkownik, Wydatek
+from .repositories import (
+    GrupaRepository,
+    SplataRepository,
+    UzytkownikRepository,
+    WydatekRepository,
+    ZaproszenieRepository,
+)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+def _sprawdz_czlonka(request, grupa: Grupa) -> None:
+    """Zwraca 403 jeśli użytkownik nie jest członkiem grupy."""
+    if not GrupaRepository.jest_czlonkiem(grupa, request.user):
+        raise PermissionDenied
 
 
 # ---------------------------------------------------------------------------
@@ -58,7 +78,9 @@ def wylogowanie(request):
 # ---------------------------------------------------------------------------
 @login_required
 def lista_grup(request):
-    grupy = request.user.grupy.all().prefetch_related("czlonkowie")
+    grupy = GrupaRepository.pobierz_grupy_uzytkownika(request.user)
+    if grupy.exists():
+        return redirect("core:szczegoly_grupy", pk=grupy.first().pk)
     return render(request, "grupy/lista.html", {"grupy": grupy})
 
 
@@ -66,13 +88,10 @@ def lista_grup(request):
 def nowa_grupa(request):
     form = GrupaForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        grupa = form.save(commit=False)
-        grupa.tworca = request.user
-        grupa.save()
-        # Twórca automatycznie staje się członkiem
-        grupa.czlonkowie.add(request.user)
-        # Utwórz menedżera rozliczeń
-        MenedzerRozliczen.objects.create(grupa=grupa)
+        grupa = GrupaRepository.stworz(
+            nazwa=form.cleaned_data["nazwa"],
+            tworca=request.user,
+        )
         messages.success(request, f"Grupa '{grupa.nazwa}' została utworzona.")
         return redirect("core:szczegoly_grupy", pk=grupa.pk)
     return render(request, "grupy/nowa.html", {"form": form})
@@ -82,17 +101,59 @@ def nowa_grupa(request):
 def szczegoly_grupy(request, pk):
     grupa = get_object_or_404(Grupa, pk=pk)
     _sprawdz_czlonka(request, grupa)
-    wydatki = grupa.menedzer.wydatki.select_related("platnik").order_by("-data")[:10]
-    splaty = grupa.menedzer.splaty.select_related("platnik", "odbiorca").order_by("-data")[:5]
-    bilans = grupa.menedzer.przelicz_bilans()
+
+    wydatki = WydatekRepository.pobierz_ostatnie(grupa, ile=100)
+    splaty = SplataRepository.pobierz_ostatnie(grupa, ile=100)
+    czlonkowie = GrupaRepository.pobierz_czlonkow(grupa)
+
+    # Obliczenia KPI
+    suma_wydatkow = sum(w.kwota for w in wydatki)
+    liczba_wydatkow = len(wydatki)
+    liczba_splat = len(splaty)
+    czlonkowie_count = czlonkowie.count()
+    srednia_na_osobe = (
+        round(suma_wydatkow / czlonkowie_count, 2) if czlonkowie_count > 0 else Decimal("0.00")
+    )
+
     transakcje = grupa.menedzer.optymalizuj_dlugi()
+    pozostalo_do_rozliczenia = sum(t["kwota"] for t in transakcje)
+    liczba_przelewow = len(transakcje)
+
+    kpi = {
+        "suma_wydatkow": suma_wydatkow,
+        "liczba_wydatkow": liczba_wydatkow,
+        "liczba_splat": liczba_splat,
+        "czlonkowie_count": czlonkowie_count,
+        "srednia_na_osobe": srednia_na_osobe,
+        "pozostalo_do_rozliczenia": pozostalo_do_rozliczenia,
+        "liczba_przelewow": liczba_przelewow,
+    }
+
+    bilans_tabela = grupa.menedzer.pobierz_szczegolowy_bilans()
+    podsumowanie_tekst = grupa.menedzer.generuj_podsumowanie_tekst()
+
+    # Formularze do modali
+    wydatek_form = WydatekForm(grupa=grupa, initial={"platnik": request.user})
+    splata_form = SplataForm(grupa=grupa, user=request.user)
+    dodaj_czlonka_form = DodajCzlonkaForm()
+    grupa_form = GrupaForm(instance=grupa)
+
+    aktywny_tab = request.GET.get("tab", "expenses")
+
     return render(request, "grupy/szczegoly.html", {
         "grupa": grupa,
+        "kpi": kpi,
         "wydatki": wydatki,
         "splaty": splaty,
-        "czlonkowie": grupa.pobierz_czlonkow(),
-        "bilans": bilans,
+        "czlonkowie": czlonkowie,
+        "bilans_tabela": bilans_tabela,
         "transakcje": transakcje,
+        "podsumowanie_tekst": podsumowanie_tekst,
+        "wydatek_form": wydatek_form,
+        "splata_form": splata_form,
+        "dodaj_czlonka_form": dodaj_czlonka_form,
+        "grupa_form": grupa_form,
+        "aktywny_tab": aktywny_tab,
     })
 
 
@@ -101,7 +162,7 @@ def usun_grupe(request, pk):
     grupa = get_object_or_404(Grupa, pk=pk, tworca=request.user)
     if request.method == "POST":
         nazwa = grupa.nazwa
-        grupa.delete()
+        GrupaRepository.usun(grupa)
         messages.success(request, f"Grupa '{nazwa}' została usunięta.")
         return redirect("core:lista_grup")
     return render(request, "grupy/usun.html", {"grupa": grupa})
@@ -114,24 +175,19 @@ def dodaj_czlonka(request, pk):
     form = DodajCzlonkaForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         email = form.cleaned_data["adres_email"]
-        try:
-            user = Uzytkownik.objects.get(adres_email=email)
-            if grupa.czlonkowie.filter(pk=user.pk).exists():
-                messages.error(request, f"{user.imie} już należy do grupy.")
-            elif Zaproszenie.objects.filter(
-                grupa=grupa, zaproszony=user,
-                status=Zaproszenie.STATUS_OCZEKUJACE
-            ).exists():
-                messages.warning(request, f"Zaproszenie do {user.imie} już zostało wysłane.")
-            else:
-                Zaproszenie.objects.create(
+        user = UzytkownikRepository.pobierz_po_email(email)
+        if not user:
+            messages.error(request, f"Nie znaleziono użytkownika o adresie {email}.")
+        else:
+            try:
+                ZaproszenieRepository.wyslij(
                     grupa=grupa,
                     zapraszajacy=request.user,
                     zaproszony=user,
                 )
                 messages.success(request, f"Zaproszenie zostało wysłane do {user.imie}.")
-        except Uzytkownik.DoesNotExist:
-            messages.error(request, f"Nie znaleziono użytkownika o adresie {email}.")
+            except ValueError as e:
+                messages.warning(request, str(e))
         return redirect("core:szczegoly_grupy", pk=pk)
     return render(request, "grupy/dodaj_czlonka.html", {"form": form, "grupa": grupa})
 
@@ -145,8 +201,20 @@ def usun_czlonka(request, pk, user_pk):
     if user == grupa.tworca:
         messages.error(request, "Nie można usunąć twórcy grupy.")
     else:
-        grupa.usun_uzytkownika(user)
+        GrupaRepository.usun_czlonka(grupa, user)
         messages.success(request, f"{user.imie} został usunięty z grupy.")
+    return redirect("core:szczegoly_grupy", pk=pk)
+
+
+@login_required
+def edytuj_grupe(request, pk):
+    grupa = get_object_or_404(Grupa, pk=pk)
+    _sprawdz_czlonka(request, grupa)
+    form = GrupaForm(request.POST or None, instance=grupa)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, f"Grupa została zaktualizowana.")
+        return redirect(f"{reverse('core:szczegoly_grupy', kwargs={'pk': pk})}?tab=members")
     return redirect("core:szczegoly_grupy", pk=pk)
 
 
@@ -159,22 +227,14 @@ def nowy_wydatek(request, pk):
     _sprawdz_czlonka(request, grupa)
     form = WydatekForm(request.POST or None, grupa=grupa)
     if request.method == "POST" and form.is_valid():
-        wydatek = form.save(commit=False)
-        wydatek.menedzer = grupa.menedzer
-        wydatek.save()
-        # Równy podział między wszystkich członków
-        czlonkowie = lista_bez(grupa.pobierz_czlonkow(), wydatek.platnik)
-        if czlonkowie:
-            kwota_na_osobe = wydatek.kwota / (len(czlonkowie) + 1)
-            from .models import PodzialWydatku
-            for czlonek in czlonkowie:
-                PodzialWydatku.objects.create(
-                    wydatek=wydatek,
-                    uzytkownik=czlonek,
-                    kwota_do_oddania=round(kwota_na_osobe, 2),
-                )
+        wydatek = WydatekRepository.stworz(
+            grupa=grupa,
+            tytul=form.cleaned_data["tytul"],
+            kwota=form.cleaned_data["kwota"],
+            platnik=form.cleaned_data["platnik"],
+        )
         messages.success(request, f"Wydatek '{wydatek.tytul}' został dodany.")
-        return redirect("core:szczegoly_grupy", pk=pk)
+        return redirect(f"{reverse('core:szczegoly_grupy', kwargs={'pk': pk})}?tab=expenses")
     return render(request, "wydatki/nowy.html", {"form": form, "grupa": grupa})
 
 
@@ -187,7 +247,7 @@ def edytuj_wydatek(request, pk):
     if request.method == "POST" and form.is_valid():
         form.save()
         messages.success(request, "Wydatek został zaktualizowany.")
-        return redirect("core:szczegoly_grupy", pk=grupa.pk)
+        return redirect(f"{reverse('core:szczegoly_grupy', kwargs={'pk': grupa.pk})}?tab=expenses")
     return render(request, "wydatki/edytuj.html", {"form": form, "wydatek": wydatek, "grupa": grupa})
 
 
@@ -198,9 +258,9 @@ def usun_wydatek(request, pk):
     grupa = wydatek.menedzer.grupa
     _sprawdz_czlonka(request, grupa)
     tytul = wydatek.tytul
-    wydatek.delete()
+    WydatekRepository.usun(wydatek)
     messages.success(request, f"Wydatek '{tytul}' został usunięty.")
-    return redirect("core:szczegoly_grupy", pk=grupa.pk)
+    return redirect(f"{reverse('core:szczegoly_grupy', kwargs={'pk': grupa.pk})}?tab=expenses")
 
 
 # ---------------------------------------------------------------------------
@@ -210,25 +270,14 @@ def usun_wydatek(request, pk):
 def bilans_grupy(request, pk):
     grupa = get_object_or_404(Grupa, pk=pk)
     _sprawdz_czlonka(request, grupa)
-    menedzer = grupa.menedzer
-    bilans = menedzer.przelicz_bilans()
-    transakcje = menedzer.optymalizuj_dlugi()
-    return render(request, "rozliczenia/bilans.html", {
-        "grupa": grupa,
-        "bilans": bilans,
-        "transakcje": transakcje,
-    })
+    return redirect(f"{reverse('core:szczegoly_grupy', kwargs={'pk': pk})}?tab=balances")
 
 
 @login_required
 def historia_grupy(request, pk):
     grupa = get_object_or_404(Grupa, pk=pk)
     _sprawdz_czlonka(request, grupa)
-    historia = grupa.menedzer.pobierz_historie_operacji()
-    return render(request, "rozliczenia/historia.html", {
-        "grupa": grupa,
-        "historia": historia,
-    })
+    return redirect(f"{reverse('core:szczegoly_grupy', kwargs={'pk': pk})}?tab=expenses")
 
 
 @login_required
@@ -237,16 +286,55 @@ def nowa_splata(request, pk):
     _sprawdz_czlonka(request, grupa)
     form = SplataForm(request.POST or None, grupa=grupa, user=request.user)
     if request.method == "POST" and form.is_valid():
-        splata = form.save(commit=False)
-        splata.menedzer = grupa.menedzer
         try:
-            splata.waliduj()
-            splata.save()
-            messages.success(request, "Spłata została zarejestrowana.")
+            SplataRepository.stworz(
+                grupa=grupa,
+                platnik=form.cleaned_data["platnik"],
+                odbiorca=form.cleaned_data["odbiorca"],
+                kwota=form.cleaned_data["kwota"],
+            )
+            messages.success(request, "Zwrot został zarejestrowany.")
         except ValueError as e:
             messages.error(request, str(e))
-        return redirect("core:bilans_grupy", pk=pk)
+        return redirect(f"{reverse('core:szczegoly_grupy', kwargs={'pk': pk})}?tab=balances")
     return render(request, "rozliczenia/nowa_splata.html", {"form": form, "grupa": grupa})
+
+
+@login_required
+@require_POST
+def szybka_splata(request, pk):
+    """Błyskawiczne zarejestrowanie zwrotu z listy 'Proponowane przelewy'."""
+    grupa = get_object_or_404(Grupa, pk=pk)
+    _sprawdz_czlonka(request, grupa)
+    od_email = request.POST.get("od_email")
+    do_email = request.POST.get("do_email")
+    kwota = request.POST.get("kwota")
+    od_user = UzytkownikRepository.pobierz_po_email(od_email)
+    do_user = UzytkownikRepository.pobierz_po_email(do_email)
+    if od_user and do_user and kwota:
+        try:
+            splata = SplataRepository.stworz(
+                grupa=grupa,
+                platnik=od_user,
+                odbiorca=do_user,
+                kwota=Decimal(str(kwota)),
+            )
+            SplataRepository.oznacz_uregulowana(splata)
+            messages.success(request, f"Oznaczono jako rozliczone: {od_user.imie} → {do_user.imie} ({kwota} zł).")
+        except Exception as e:
+            messages.error(request, str(e))
+    return redirect(f"{reverse('core:szczegoly_grupy', kwargs={'pk': pk})}?tab=balances")
+
+
+@login_required
+@require_POST
+def usun_splate(request, pk):
+    splata = get_object_or_404(Splata, pk=pk)
+    grupa = splata.menedzer.grupa
+    _sprawdz_czlonka(request, grupa)
+    SplataRepository.usun(splata)
+    messages.success(request, "Zwrot został usunięty.")
+    return redirect(f"{reverse('core:szczegoly_grupy', kwargs={'pk': grupa.pk})}?tab=expenses")
 
 
 @login_required
@@ -254,24 +342,9 @@ def nowa_splata(request, pk):
 def ureguluj_splate(request, pk):
     splata = get_object_or_404(Splata, pk=pk)
     _sprawdz_czlonka(request, splata.menedzer.grupa)
-    splata.oznacz_jako_uregulowany()
+    SplataRepository.oznacz_uregulowana(splata)
     messages.success(request, "Spłata została oznaczona jako uregulowana.")
-    return redirect("core:bilans_grupy", pk=splata.menedzer.grupa.pk)
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-def _sprawdz_czlonka(request, grupa):
-    """Zwraca 403 jeśli użytkownik nie jest członkiem grupy."""
-    from django.core.exceptions import PermissionDenied
-    if not grupa.czlonkowie.filter(pk=request.user.pk).exists():
-        raise PermissionDenied
-
-
-def lista_bez(queryset_or_list, wyklucz):
-    """Zwraca listę bez wskazanego elementu."""
-    return [u for u in queryset_or_list if u.pk != wyklucz.pk]
+    return redirect(f"{reverse('core:szczegoly_grupy', kwargs={'pk': splata.menedzer.grupa.pk})}?tab=balances")
 
 
 # ---------------------------------------------------------------------------
@@ -279,29 +352,21 @@ def lista_bez(queryset_or_list, wyklucz):
 # ---------------------------------------------------------------------------
 @login_required
 def lista_zaproszen(request):
-    """Lista oczekujących zaproszeń do grup dla zalogowanego użytkownika."""
-    zaproszenia = (
-        request.user.zaproszenia_otrzymane
-        .filter(status=Zaproszenie.STATUS_OCZEKUJACE)
-        .select_related("grupa", "zapraszajacy")
-        .order_by("-data_wyslania")
-    )
+    zaproszenia = ZaproszenieRepository.pobierz_oczekujace(request.user)
     return render(request, "zaproszenia/lista.html", {"zaproszenia": zaproszenia})
 
 
 @login_required
 @require_POST
 def akceptuj_zaproszenie(request, pk):
+    from .models import Zaproszenie
     zaproszenie = get_object_or_404(
         Zaproszenie, pk=pk, zaproszony=request.user,
-        status=Zaproszenie.STATUS_OCZEKUJACE
+        status=Zaproszenie.STATUS_OCZEKUJACE,
     )
     try:
-        zaproszenie.akceptuj()
-        messages.success(
-            request,
-            f"Dołączyłeś do grupy '{zaproszenie.grupa.nazwa}'!"
-        )
+        ZaproszenieRepository.akceptuj(zaproszenie)
+        messages.success(request, f"Dołączyłeś do grupy '{zaproszenie.grupa.nazwa}'!")
     except ValueError as e:
         messages.error(request, str(e))
     return redirect("core:lista_zaproszen")
@@ -310,10 +375,11 @@ def akceptuj_zaproszenie(request, pk):
 @login_required
 @require_POST
 def odrzuc_zaproszenie(request, pk):
+    from .models import Zaproszenie
     zaproszenie = get_object_or_404(
         Zaproszenie, pk=pk, zaproszony=request.user,
-        status=Zaproszenie.STATUS_OCZEKUJACE
+        status=Zaproszenie.STATUS_OCZEKUJACE,
     )
-    zaproszenie.odrzuc()
+    ZaproszenieRepository.odrzuc(zaproszenie)
     messages.info(request, f"Odrzuciłeś zaproszenie do grupy '{zaproszenie.grupa.nazwa}'.")
     return redirect("core:lista_zaproszen")
